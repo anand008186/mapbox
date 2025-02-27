@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/Card";
 import { MapPin, Navigation, Search, Satellite } from "lucide-react"
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
+import { cn } from "./lib/utils";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN!;
 
@@ -146,7 +147,7 @@ const App: React.FC = () => {
             const schoolName = feature.properties?.USE_DESC;
             if (!schoolName) return;
 
-            // Create a DOM element for the marker.
+            // Create aDOM element for  the marker.
             const el = document.createElement("div");
             el.className = "school-marker";
             el.style.width = "30px";
@@ -285,15 +286,10 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
+    <div className="max-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
          {/* Header */}
-         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">School Catchment Finder</h1>
-          <p className="mt-3 text-lg text-muted-foreground">
-            Find schools in your area and explore their catchment zones
-          </p>
-        </div>
+        
       {/* Map container with overflow hidden to clip markers/popups */}
       {/* <div
         ref={mapContainerRef}
@@ -307,9 +303,20 @@ const App: React.FC = () => {
           position: "relative",
         }}
       /> */}
+      <Card className="mx-auto max-w-[1200px] rounded-2xl shadow-lg">
+      <div className="mb-8 rounded-xl border ">
+          <div className="m-4">
+          <h1 className=" text-xlfont-bold tracking-tight  md:text-3xl">Plan School Journey</h1>
+          <p className="mt-3 text-lg text-muted-foreground">
+          Find out the travel time from this school to your important destinations including, work, home, train stations, shops, beaches
+          </p>
+        </div>
+        </div>
+        
+       
 
-       <div className="mb-8 rounded-xl border bg-card shadow-sm">
-          <div
+      <div className="grid lg:grid-cols-2 min-h-[600px] p-4">
+      <div
             ref={mapContainerRef}
             style={{
               width: "80%",
@@ -321,95 +328,118 @@ const App: React.FC = () => {
               position: "relative",
             }}
           />
-        </div>
-
+     
         {/* Search Section */}
-        <div className="space-y-6">
+       {
+        selectedSchool &&
+        <div className="space-y-6 max-h-[600px] overflow-y-auto hide-scrollbar">
+        <Card>
+          {/* <CardHeader>
+            <CardTitle>Search Location</CardTitle>
+          </CardHeader> */}
+          <CardContent className="p-6">
+            <div className="flex flex-col gap-4">
+            <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Enter a school address"
+                  value={selectedSchool?.name}
+                  readOnly
+                  className="pl-9"
+                />
+              </div>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Enter destination address"
+                  value={destinationQuery}
+                  onChange={(e) => setDestinationQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button onClick={handleSearch} className="w-full sm:w-auto">
+                See Your Travel Time
+              </Button>
+              
+            </div>
+
+            {/* Search Results */}
+            {searchResults.length > 0 && (
+              <div className="mt-4">
+                <ul className="space-y-2">
+                  {searchResults.map((result, index) => (
+                    <li key={index}>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full text-left justify-start h-auto py-3",
+                          {
+                            "border-2 border-blue-500": selectedDestination?.id === result.id,
+                          }
+                        )}
+                        onClick={() => setSelectedDestination(result)}
+                      >
+                        <MapPin className="mr-2 h-4 w-4" />
+                        {result.place_name}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Button onClick={handlePlanJourney} className="mt-4 w-full sm:w-auto">
+                Show Distance and Time
+              </Button>
+
+        {/* Journey Details */}
+        {routeDetails && (
           <Card>
             <CardHeader>
-              <CardTitle>Search Location</CardTitle>
+              <CardTitle>Journey Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Enter an address"
-                    value={destinationQuery}
-                    onChange={(e) => setDestinationQuery(e.target.value)}
-                    className="pl-9"
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Navigation className="h-4 w-4 text-muted-foreground" />
+                  <span>Duration: {routeDetails.duration}</span>
                 </div>
-                <Button onClick={handleSearch} className="w-full sm:w-auto">
-                  Search
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span>Distance: {routeDetails.distance}</span>
+                </div>
               </div>
-
-              {/* Search Results */}
-              {searchResults.length > 0 && (
-                <div className="mt-4">
-                  <ul className="space-y-2">
-                    {searchResults.map((result, index) => (
-                      <li key={index}>
-                        <Button
-                          variant="outline"
-                          className="w-full text-left justify-start h-auto py-3"
-                          onClick={() => setSelectedDestination(result)}
-                        >
-                          <MapPin className="mr-2 h-4 w-4" />
-                          {result.place_name}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+             
             </CardContent>
           </Card>
+        )}
 
-          {/* Journey Details */}
-          {routeDetails && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Journey Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Navigation className="h-4 w-4 text-muted-foreground" />
-                    <span>Duration: {routeDetails.duration}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>Distance: {routeDetails.distance}</span>
-                  </div>
-                </div>
-                <Button onClick={handlePlanJourney} className="mt-4 w-full sm:w-auto">
-                  Show Distance and Time
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+        {/* School Details */}
+        {selectedSchool && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Points of Interest in Catchment</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                See nearby areas of interest such as other schools, day care, shops, train stations, and beaches.
+              </p>
+              <Button onClick={toggleMapStyle} variant="outline" className="w-full sm:w-auto">
+                <Satellite className="mr-2 h-4 w-4" />
+                Toggle Street / Satellite View
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+       }
 
-          {/* School Details */}
-          {selectedSchool && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Points of Interest in Catchment</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  See nearby areas of interest such as other schools, day care, shops, train stations, and beaches.
-                </p>
-                <Button onClick={toggleMapStyle} variant="outline" className="w-full sm:w-auto">
-                  <Satellite className="mr-2 h-4 w-4" />
-                  Toggle Street / Satellite View
-                </Button>
-              </CardContent>
-            </Card>
-          )}
         </div>
+        </Card>
       </div>
     </div>
   );
