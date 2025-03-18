@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [routeDetails, setRouteDetails] = useState<{ duration: string; distance: string } | null>(null);
   const [selectedSchool, setSelectedSchool] = useState<SelectedSchool | null>(null);
   const [mapStyle, setMapStyle] = useState<string>("mapbox://styles/mapbox/streets-v12");
+  const [urlSchoolId, setUrlSchoolId] = useState<string | null>(null);
 
   // Ref to store fetched catchments GeoJSON.
   const catchmentsRef = useRef<any>(null);
@@ -35,6 +36,73 @@ const App: React.FC = () => {
   const poiMarkersRef = useRef<mapboxgl.Marker[]>([]);
   // New ref: property markers (home icons)
   const propertyMarkersRef = useRef<mapboxgl.Marker[]>([]);
+  // Ref to store school centroids
+  const schoolCentroidsRef = useRef<{[key: string]: {coordinates: [number, number], name: string, suburb?: string}}>({}); 
+
+  // Parse URL parameters on component mount
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const schoolId = searchParams.get('school');
+    if (schoolId) {
+      setUrlSchoolId(schoolId);
+    }
+  }, []);
+
+  // Function to handle highlighting a catchment and selecting a school
+  const selectSchool = (schoolName: string, coordinates: [number, number], suburb?: string) => {
+    setSelectedSchool({ name: schoolName, coordinates, suburb });
+    
+    if (mapRef.current) {
+      // Update the highlighted catchment filter
+      mapRef.current.setFilter("highlighted-catchments", ["==", "USE_DESC", schoolName]);
+      
+      // Look up matching catchment and zoom
+      if (catchmentsRef.current) {
+        const matchingFeature = catchmentsRef.current.features.find(
+          (f: any) => f.properties?.USE_DESC === schoolName
+        );
+        
+        if (matchingFeature) {
+          const bounds = new mapboxgl.LngLatBounds();
+          if (matchingFeature.geometry.type === "Polygon") {
+            matchingFeature.geometry.coordinates[0].forEach((coord: number[]) => {
+              bounds.extend(coord as [number, number]);
+            });
+          } else if (matchingFeature.geometry.type === "MultiPolygon") {
+            matchingFeature.geometry.coordinates[0][0].forEach((coord: number[]) => {
+              bounds.extend(coord as [number, number]);
+            });
+          }
+          mapRef.current.fitBounds(bounds, { padding: 50 });
+        }
+      }
+      
+      // Show popup
+      new mapboxgl.Popup({ closeButton: true })
+        .setLngLat(coordinates)
+        .setHTML(`<div style="padding: 5px; font-size: 14px;">${schoolName}</div>`)
+        .addTo(mapRef.current);
+      
+      // Fetch property listings using the suburb value
+      if (suburb) {
+        fetchPropertiesForSuburb(suburb);
+      }
+    }
+  };
+
+  // Effect to handle URL-based school selection once map and catchments are loaded
+  useEffect(() => {
+    if (urlSchoolId && map && catchmentsRef.current && Object.keys(schoolCentroidsRef.current).length > 0) {
+      // Find matching school by ID
+      const schoolInfo = schoolCentroidsRef.current[urlSchoolId];
+      
+      if (schoolInfo) {
+        selectSchool(schoolInfo.name, schoolInfo.coordinates, schoolInfo.suburb);
+        // Optionally fetch POIs
+        fetchPOIs(schoolInfo.coordinates[0], schoolInfo.coordinates[1]);
+      }
+    }
+  }, [urlSchoolId, map, catchmentsRef.current, schoolCentroidsRef.current]);
 
   // Function to fetch POIs using Mapbox Geocoding API.
   const fetchPOIs = async (lng: number, lat: number) => {
@@ -211,6 +279,9 @@ const App: React.FC = () => {
             }),
           };
 
+          // Store school centroids in ref for URL-based selection
+          const centroidsMap: {[key: string]: {coordinates: [number, number], name: string, suburb?: string}} = {};
+
           // For each school centroid, create a Marker with event listeners.
           schoolCentroids.features.forEach((feature) => {
             const coordinates = (feature.geometry as Point).coordinates as [number, number];
@@ -218,6 +289,14 @@ const App: React.FC = () => {
             // Assume the suburb is available in the feature properties; fallback to schoolName.
             const suburb = feature.properties?.suburb || schoolName.split(" PS")[0];
             if (!schoolName) return;
+
+            // Store in centroids map using school name as key (sanitized for URL)
+            const schoolId = schoolName.replace(/\s+/g, '_').toLowerCase();
+            centroidsMap[schoolId] = {
+              coordinates,
+              name: schoolName,
+              suburb
+            };
 
             // Create a DOM element for the marker.
             const el = document.createElement("div");
@@ -246,45 +325,30 @@ const App: React.FC = () => {
                 (el as any).currentPopup = null;
               }
             });
+
             // On click, zoom to the catchment, set this school as selected, and fetch properties.
             el.addEventListener("click", () => {
-              // Update selected school with suburb information.
-              setSelectedSchool({ name: schoolName, coordinates, suburb });
-              mapInstance.setFilter("highlighted-catchments", ["==", "USE_DESC", schoolName]);
-              // Look up matching catchment and zoom.
-              if (catchmentsRef.current) {
-                const matchingFeature = catchmentsRef.current.features.find(
-                  (f: any) => f.properties?.USE_DESC === schoolName
-                );
-                if (matchingFeature) {
-                  const bounds = new mapboxgl.LngLatBounds();
-                  if (matchingFeature.geometry.type === "Polygon") {
-                    matchingFeature.geometry.coordinates[0].forEach((coord: number[]) => {
-                      bounds.extend(coord as [number, number]);
-                    });
-                  } else if (matchingFeature.geometry.type === "MultiPolygon") {
-                    matchingFeature.geometry.coordinates[0][0].forEach((coord: number[]) => {
-                      bounds.extend(coord as [number, number]);
-                    });
-                  }
-                  mapInstance.fitBounds(bounds, { padding: 50 });
-                }
-              }
-              // Show a click popup.
-              new mapboxgl.Popup({ closeButton: true })
-                .setLngLat(coordinates)
-                .setHTML(`<div style="padding: 5px; font-size: 14px;">${schoolName}</div>`)
-                .addTo(mapInstance);
-              // Fetch property listings using the suburb value.
-              if (suburb) {
-
-                fetchPropertiesForSuburb(suburb);
-              } else {
-              }
+              // Update URL with the school ID without refreshing the page
+              const url = new URL(window.location.href);
+              url.searchParams.set('school', schoolId);
+              window.history.pushState({}, '', url.toString());
+              
+              // Select school using the common function
+              selectSchool(schoolName, coordinates, suburb);
             });
 
             new mapboxgl.Marker(el).setLngLat(coordinates).addTo(mapInstance);
           });
+
+          // Store the centroids map for later reference
+          schoolCentroidsRef.current = centroidsMap;
+
+          // Check if URL contains a school ID and handle it
+          if (urlSchoolId && centroidsMap[urlSchoolId]) {
+            const { name, coordinates, suburb } = centroidsMap[urlSchoolId];
+            selectSchool(name, coordinates, suburb);
+            fetchPOIs(coordinates[0], coordinates[1]);
+          }
         });
 
       // Add route source and layer.
@@ -306,7 +370,7 @@ const App: React.FC = () => {
     mapRef.current = mapInstance;
 
     return () => mapInstance.remove();
-  }, [mapStyle]);
+  }, [mapStyle, urlSchoolId]);
 
   const handleSearch = async () => {
     if (destinationQuery.length < 3) return;
@@ -367,7 +431,7 @@ const App: React.FC = () => {
     <div className="max-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <Card className="mx-auto max-w-[1200px] rounded-2xl shadow-lg">
-          <div className="mb-8 rounded-xl border">
+          <div className="mb-8 rounded-xl">
             <div className="m-4">
               <h1 className="text-xl font-bold tracking-tight md:text-3xl">
                 Plan School Journey
@@ -382,7 +446,7 @@ const App: React.FC = () => {
               ref={mapContainerRef}
               style={{
                 width: "80%",
-                height: "500px",
+                aspectRatio: "1/1",
                 margin: "0 auto",
                 border: "1px solid #ccc",
                 borderRadius: "10px",
@@ -391,31 +455,29 @@ const App: React.FC = () => {
               }}
             />
             {selectedSchool && (
-              <div className="space-y-6 max-h-[600px] overflow-y-auto hide-scrollbar">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col gap-4">
+              <div className="space-y-6 max-w-[400px] max-h-[600px] overflow-y-auto hide-scrollbar">
+                  <div className="flex flex-col gap-4">
                       <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        {/* <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /> */}
                         <Input
                           type="text"
                           placeholder="Enter a school address"
                           value={selectedSchool?.name}
                           readOnly
-                          className="pl-9"
+                          className="pl-3"
                         />
                       </div>
                       <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        {/* <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /> */}
                         <Input
                           type="text"
                           placeholder="Enter destination address"
                           value={destinationQuery}
                           onChange={(e) => setDestinationQuery(e.target.value)}
-                          className="pl-9"
+                          className="pl-3"
                         />
                       </div>
-                      <Button onClick={handleSearch} className="w-full sm:w-auto">
+                      <Button onClick={handleSearch} className="w-full sm:w-auto bg-[#147781] hover:bg-[#147781]/90 text-white">
                         See Your Travel Time
                       </Button>
                     </div>
@@ -427,26 +489,29 @@ const App: React.FC = () => {
                               <Button
                                 variant="outline"
                                 className={cn(
-                                  "w-full text-left justify-start h-auto py-3",
+                                  "w-full text-left justify-start h-auto py-3 overflow-x-auto whitespace-nowrap",
                                   {
-                                    "border-2 border-blue-500": selectedDestination?.id === result.id,
+                                    "border-2 border-[#147781]": selectedDestination?.id === result.id,
                                   }
                                 )}
                                 onClick={() => setSelectedDestination(result)}
                               >
-                                <MapPin className="mr-2 h-4 w-4" />
-                                {result.place_name}
+                                <div className="flex items-center">
+                                  <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                                  <span className="text-sm">{result.place_name}</span>
+                                </div>
                               </Button>
                             </li>
                           ))}
                         </ul>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-                <Button onClick={handlePlanJourney} className="mt-4 w-full sm:w-auto">
+               {
+                selectedDestination && ( <Button onClick={handlePlanJourney} className="mt-4 w-full sm:w-auto bg-[#147781] hover:bg-[#147781]/90 text-white">
                   Show Distance and Time
                 </Button>
+               )
+               }
                 {routeDetails && (
                   <Card>
                     <CardHeader>
