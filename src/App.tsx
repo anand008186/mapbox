@@ -4,7 +4,7 @@ import * as turf from "@turf/turf";
 import { FeatureCollection, Geometry, Point } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/Card";
-import { MapPin, Navigation, Search, Satellite } from "lucide-react";
+import { MapPin, Navigation, Satellite } from "lucide-react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { cn } from "./lib/utils";
