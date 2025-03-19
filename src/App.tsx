@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [routeDetails, setRouteDetails] = useState<{ duration: string; distance: string } | null>(null);
   const [selectedSchool, setSelectedSchool] = useState<SelectedSchool | null>(null);
   const [mapStyle, setMapStyle] = useState<string>("mapbox://styles/mapbox/streets-v12");
+  const [urlSchoolName, setUrlSchoolName] = useState<string | null>(null);
 
   // Ref to store fetched catchments GeoJSON.
   const catchmentsRef = useRef<any>(null);
@@ -160,6 +161,16 @@ const App: React.FC = () => {
       fetchPOIs(selectedSchool.coordinates[0], selectedSchool.coordinates[1]);
     });
   };
+// first check the school name from the url
+  useEffect(() => {
+    const schoolName = window.location.pathname.split("/").pop();
+    if (schoolName) {
+      setUrlSchoolName(schoolName);
+    }else{
+      //add a default school
+      setUrlSchoolName("lindfield_eps");
+    }
+  }, []);
 
   useEffect(() => {
     const mapInstance = new mapboxgl.Map({
@@ -198,28 +209,20 @@ const App: React.FC = () => {
               filter: ["in", "USE_DESC", ""],
             });
           }
-          // Calculate school centroids using Turf.
-          const schoolCentroids: FeatureCollection<Geometry> = {
-            type: "FeatureCollection",
-            features: data.features.map((feature: any) => {
-              const centroid = turf.centroid(feature);
-              return {
-                type: "Feature",
-                geometry: centroid.geometry,
-                properties: { USE_DESC: feature.properties?.USE_DESC, suburb: feature.properties?.suburb },
-              };
-            }),
-          };
 
-          // For each school centroid, create a Marker with event listeners.
-          schoolCentroids.features.forEach((feature) => {
-            const coordinates = (feature.geometry as Point).coordinates as [number, number];
-            const schoolName = feature.properties?.USE_DESC;
-            // Assume the suburb is available in the feature properties; fallback to schoolName.
-            const suburb = feature.properties?.suburb || schoolName.split(" PS")[0];
-            if (!schoolName) return;
+          // Find the matching school feature
+          const matchingFeature = data.features.find((feature: any) => {
+            const schoolName = feature.properties?.USE_DESC.replace(/\s+/g, '_').toLowerCase();
+            return schoolName === urlSchoolName;
+          });
 
-            // Create a DOM element for the marker.
+          if (matchingFeature) {
+            const centroid = turf.centroid(matchingFeature);
+            const coordinates = (centroid.geometry as Point).coordinates as [number, number];
+            const schoolName = matchingFeature.properties?.USE_DESC;
+            const suburb = matchingFeature.properties?.suburb || schoolName.split(" PS")[0];
+
+            // Create marker for the selected school
             const el = document.createElement("div");
             el.className = "school-marker";
             el.style.width = "30px";
@@ -229,7 +232,7 @@ const App: React.FC = () => {
             el.style.backgroundRepeat = "no-repeat";
             el.style.cursor = "pointer";
 
-            // Show a hover popup.
+            // Show popup on hover
             el.addEventListener("mouseenter", () => {
               const popup = new mapboxgl.Popup({
                 closeButton: false,
@@ -246,45 +249,39 @@ const App: React.FC = () => {
                 (el as any).currentPopup = null;
               }
             });
-            // On click, zoom to the catchment, set this school as selected, and fetch properties.
-            el.addEventListener("click", () => {
-              // Update selected school with suburb information.
-              setSelectedSchool({ name: schoolName, coordinates, suburb });
-              mapInstance.setFilter("highlighted-catchments", ["==", "USE_DESC", schoolName]);
-              // Look up matching catchment and zoom.
-              if (catchmentsRef.current) {
-                const matchingFeature = catchmentsRef.current.features.find(
-                  (f: any) => f.properties?.USE_DESC === schoolName
-                );
-                if (matchingFeature) {
-                  const bounds = new mapboxgl.LngLatBounds();
-                  if (matchingFeature.geometry.type === "Polygon") {
-                    matchingFeature.geometry.coordinates[0].forEach((coord: number[]) => {
-                      bounds.extend(coord as [number, number]);
-                    });
-                  } else if (matchingFeature.geometry.type === "MultiPolygon") {
-                    matchingFeature.geometry.coordinates[0][0].forEach((coord: number[]) => {
-                      bounds.extend(coord as [number, number]);
-                    });
-                  }
-                  mapInstance.fitBounds(bounds, { padding: 50 });
-                }
-              }
-              // Show a click popup.
-              new mapboxgl.Popup({ closeButton: true })
-                .setLngLat(coordinates)
-                .setHTML(`<div style="padding: 5px; font-size: 14px;">${schoolName}</div>`)
-                .addTo(mapInstance);
-              // Fetch property listings using the suburb value.
-              if (suburb) {
 
-                fetchPropertiesForSuburb(suburb);
-              } else {
-              }
-            });
-
+            // Add marker to map
             new mapboxgl.Marker(el).setLngLat(coordinates).addTo(mapInstance);
-          });
+
+            // Set selected school and highlight catchment
+            setSelectedSchool({ name: schoolName, coordinates, suburb });
+            mapInstance.setFilter("highlighted-catchments", ["==", "USE_DESC", schoolName]);
+
+            // Zoom to the catchment
+            const bounds = new mapboxgl.LngLatBounds();
+            if (matchingFeature.geometry.type === "Polygon") {
+              matchingFeature.geometry.coordinates[0].forEach((coord: number[]) => {
+                bounds.extend(coord as [number, number]);
+              });
+            } else if (matchingFeature.geometry.type === "MultiPolygon") {
+              matchingFeature.geometry.coordinates[0][0].forEach((coord: number[]) => {
+                bounds.extend(coord as [number, number]);
+              });
+            }
+            mapInstance.fitBounds(bounds, { padding: 50 });
+
+            // Show popup for the school
+            new mapboxgl.Popup({ closeButton: true })
+              .setLngLat(coordinates)
+              .setHTML(`<div style="padding: 5px; font-size: 14px;">${schoolName}</div>`)
+              .addTo(mapInstance);
+
+            // Fetch properties for the suburb
+            if (suburb) {
+              fetchPropertiesForSuburb(suburb);
+            }
+          }
+
         });
 
       // Add route source and layer.
@@ -306,7 +303,7 @@ const App: React.FC = () => {
     mapRef.current = mapInstance;
 
     return () => mapInstance.remove();
-  }, [mapStyle]);
+  }, [mapStyle, urlSchoolName]);
 
   const handleSearch = async () => {
     if (destinationQuery.length < 3) return;
@@ -365,24 +362,23 @@ const App: React.FC = () => {
 
   return (
     <div className="max-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <Card className="mx-auto max-w-[1200px] rounded-2xl shadow-lg">
-          <div className="mb-8 rounded-xl border">
+      <div className="mx-auto max-w-5xl p-4">
+          <div className="mb-8 rounded-xl">
             <div className="m-4">
-              <h1 className="text-xl font-bold tracking-tight md:text-3xl">
+              <h1 className="text-lg font-bold tracking-tight md:text-3xl">
                 Plan School Journey
               </h1>
-              <p className="mt-3 text-lg text-muted-foreground">
+              <p className="mt-3 text-sm text-muted-foreground">
                 Find out the travel time from this school to your important destinations including work, home, train stations, shops, and beaches.
               </p>
             </div>
           </div>
-          <div className="grid lg:grid-cols-2 min-h-[600px] p-4">
+          <div className="grid sm:grid-cols-2 gap-8  p-4">
             <div
               ref={mapContainerRef}
               style={{
-                width: "80%",
-                height: "500px",
+                width: "100%",
+                aspectRatio:1,
                 margin: "0 auto",
                 border: "1px solid #ccc",
                 borderRadius: "10px",
@@ -390,32 +386,27 @@ const App: React.FC = () => {
                 position: "relative",
               }}
             />
-            {selectedSchool && (
-              <div className="space-y-6 max-h-[600px] overflow-y-auto hide-scrollbar">
-                <Card>
-                  <CardContent className="p-6">
+            <div className="space-y-6  max-h-[500px] overflow-y-auto hide-scrollbar">
                     <div className="flex flex-col gap-4">
                       <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           type="text"
                           placeholder="Enter a school address"
                           value={selectedSchool?.name}
                           readOnly
-                          className="pl-9"
+                          className="pl-3"
                         />
                       </div>
                       <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           type="text"
                           placeholder="Enter destination address"
                           value={destinationQuery}
                           onChange={(e) => setDestinationQuery(e.target.value)}
-                          className="pl-9"
+                          className="pl-3"
                         />
                       </div>
-                      <Button onClick={handleSearch} className="w-full sm:w-auto">
+                      <Button onClick={handleSearch} className="w-full sm:w-auto bg-[#147781] hover:bg-[#147781]/90 text-white">
                         See Your Travel Time
                       </Button>
                     </div>
@@ -442,29 +433,24 @@ const App: React.FC = () => {
                         </ul>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-                <Button onClick={handlePlanJourney} className="mt-4 w-full sm:w-auto">
-                  Show Distance and Time
-                </Button>
+               {
+                selectedDestination && (
+                  <Button onClick={handlePlanJourney} className="mt-4 w-full sm:w-auto bg-[#147781] hover:bg-[#147781]/90 text-white">
+                    Show Distance and Time
+                  </Button>
+                )
+               }
                 {routeDetails && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Journey Details</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Navigation className="h-4 w-4 text-muted-foreground" />
-                          <span>Duration: {routeDetails.duration}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>Distance: {routeDetails.distance}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Navigation className="h-4 w-4 text-muted-foreground" />
+                      <span>Duration: {routeDetails.duration}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>Distance: {routeDetails.distance}</span>
+                    </div>
+                  </div>
                 )}
                 {selectedSchool && (
                   <Card>
@@ -483,9 +469,8 @@ const App: React.FC = () => {
                   </Card>
                 )}
               </div>
-            )}
           </div>
-        </Card>
+      
       </div>
     </div>
   );
