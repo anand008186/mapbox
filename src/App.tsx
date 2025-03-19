@@ -4,7 +4,7 @@ import * as turf from "@turf/turf";
 import {  Point } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/Card";
-import { MapPin, Navigation, Satellite } from "lucide-react";
+import { MapPin, Satellite } from "lucide-react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { cn } from "./lib/utils";
@@ -47,16 +47,17 @@ const App: React.FC = () => {
     for (const cat of categories) {
       try {
         const res = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cat)}.json?proximity=${lng},${lat}&access_token=${mapboxgl.accessToken}`
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cat)}.json?proximity=${lat},${lng}&access_token=${mapboxgl.accessToken}`
         );
         const data = await res.json();
         // Use the first 2 results for each category.
+        console.log("data", data);
         const features = data.features.slice(0, 2);
         features.forEach((feature: any) => {
           const coords = feature.geometry.coordinates;
           const el = document.createElement("div");
           // el.style.background = "blue";
-          el.style.backgroundImage = 'url("home.png")';
+          el.style.backgroundImage = 'url("home.jpg")';
           el.style.width = "20px";
           el.style.height = "20px";
           el.style.borderRadius = "50%";
@@ -98,30 +99,46 @@ const App: React.FC = () => {
       }
       );
       const data = await res.json();
+      console.log("suburb data", data);
       const  arr = data.tieredResults[0].results;
       // Assume the API returns an array of properties in data.properties.
+      let i = 0;
       if (arr && Array.isArray(arr)) {
         arr.forEach((property: any) => {
           // Assuming each property has longitude and latitude fields.
+          i++;
           const address = property.address
           const lng = address.location.longitude;
           const lat = address.location.latitude;
+         
+          console.log("property", lng, lat);
           
           if (lng && lat) {
-            
+          
+          console.log("i", i);
             const el = document.createElement("div");
             // Set the element style to show a home icon (adjust the URL or icon as needed).
-            // el.style.backgroundImage = 'url("home-icon.png")';
-            // el.style.background = "blue";
             el.style.backgroundImage = 'url("home.png")';
-            // el.style.border = "2px solid white";
             el.style.width = "24px";
-            el.style.height = "24px";
+            el.style.height = "34px";
             el.style.backgroundSize = "contain";
             el.style.backgroundRepeat = "no-repeat";
-            
-            // Optionally, add a title or event listener.
-            el.title = address.streetAddress || "Property";
+            el.style.position = "relative"; // Allow positioning of title
+
+            // Create a title element to show the address
+            const titleEl = document.createElement("div");
+            titleEl.innerText = address.streetAddress || "Property";
+            titleEl.style.position = "absolute";
+            titleEl.style.top = "20px"; // Position below the icon
+            titleEl.style.left = "-20px"; // Center the title
+            titleEl.style.whiteSpace = "nowrap"; // Ensure the title is in one line
+            titleEl.style.padding = "2px 5px"; // Padding around the text
+            titleEl.style.borderRadius = "3px"; // Rounded corners
+            titleEl.style.fontSize = "8px"; // Font size
+            titleEl.style.color = "black"; // Font color
+            titleEl.style.fontWeight = "bold"; // Font weight
+            el.appendChild(titleEl); // Add title to the marker element
+
             el.addEventListener("mouseenter", () => {
               new mapboxgl.Popup({ closeButton: true })
                 .setLngLat([lng, lat])
@@ -273,7 +290,7 @@ const App: React.FC = () => {
             // Show popup for the school
             new mapboxgl.Popup({ closeButton: true })
               .setLngLat(coordinates)
-              .setHTML(`<div style="padding: 5px; font-size: 14px;">${schoolName}</div>`)
+              .setHTML(`<div style="background-color: transparent; padding: 0px 0px; font-size: 12px; font-weight: bold; color: #000000;">${schoolName}</div>`)
               .addTo(mapInstance);
 
             // Fetch properties for the suburb
@@ -339,22 +356,22 @@ const App: React.FC = () => {
         alert("No routes found for the selected destination.");
         return;
       }
-      const routeSource = map.getSource("route") as mapboxgl.GeoJSONSource;
-      if (routeSource) {
-        routeSource.setData({
-          type: "FeatureCollection",
-          features: [{ type: "Feature", geometry: route.geometry, properties: {} }],
-        });
-      }
+      // const routeSource = map.getSource("route") as mapboxgl.GeoJSONSource;
+      // if (routeSource) {
+      //   routeSource.setData({
+      //     type: "FeatureCollection",
+      //     features: [{ type: "Feature", geometry: route.geometry, properties: {} }],
+      //   });
+      // }
       setRouteDetails({
         duration: `${Math.round(route.duration / 60)} minutes`,
         distance: `${(route.distance / 1000).toFixed(2)} km`,
       });
-      const bounds = new mapboxgl.LngLatBounds();
-      route.geometry.coordinates.forEach((coord: number[]) => {
-        bounds.extend(coord as [number, number]);
-      });
-      map.fitBounds(bounds, { padding: 50 });
+      // const bounds = new mapboxgl.LngLatBounds();
+      // route.geometry.coordinates.forEach((coord: number[]) => {
+      //   bounds.extend(coord as [number, number]);
+      // });
+      // map.fitBounds(bounds, { padding: 50 });
     } catch (error) {
       alert("An error occurred while calculating the route. Please try again.");
     }
@@ -402,13 +419,13 @@ const App: React.FC = () => {
                           type="text"
                           placeholder="Enter destination address"
                           value={destinationQuery}
-                          onChange={(e) => setDestinationQuery(e.target.value)}
+                          onChange={(e) => {
+                            setDestinationQuery(e.target.value);
+                            handleSearch(); // Trigger search on state change
+                          }}
                           className="pl-3"
                         />
                       </div>
-                      <Button onClick={handleSearch} className="w-full sm:w-auto bg-[#147781] hover:bg-[#147781]/90 text-white">
-                        See Your Travel Time
-                      </Button>
                     </div>
                     {searchResults.length > 0 && (
                       <div className="mt-4">
@@ -441,14 +458,12 @@ const App: React.FC = () => {
                 )
                }
                 {routeDetails && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <Navigation className="h-4 w-4 text-muted-foreground" />
-                      <span>Duration: {routeDetails.duration}</span>
+                    <div className="">
+                    <div className=" space-x-2">
+                      <span >Travel Time: </span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>Distance: {routeDetails.distance}</span>
+                    <div className="mt-2">
+                      <span className="font-semibold text-2xl ">{routeDetails.duration}, {routeDetails.distance}</span>
                     </div>
                   </div>
                 )}
