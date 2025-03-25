@@ -40,3 +40,19 @@
 .read-the-docs {
   color: #888;
 }
+
+.mapboxgl-ctrl-bottom-right {
+  bottom: 16px !important;
+  right: 16px !important;
+}
+
+.mapboxgl-ctrl-group {
+  background-color: white !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.mapboxgl-ctrl-group button {
+  width: 36px !important;
+  height: 36px !important;
+}

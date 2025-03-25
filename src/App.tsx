@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import * as turf from "@turf/turf";
-import {  Point } from "geojson";
+import { Point } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/Card";
 import { MapPin, Satellite } from "lucide-react";
@@ -37,6 +37,69 @@ const App: React.FC = () => {
   // New ref: property markers (home icons)
   const propertyMarkersRef = useRef<mapboxgl.Marker[]>([]);
 
+  // First, add a new state for fullscreen mode
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Add this new ref to store initial map bounds
+  const initialBoundsRef = useRef<mapboxgl.LngLatBounds | null>(null);
+
+  // Completely replace the toggleFullscreen function
+  const toggleFullscreen = () => {
+    const newState = !isFullscreen;
+    setIsFullscreen(newState);
+    
+    // Use setTimeout to ensure state has updated before we manipulate the DOM
+    setTimeout(() => {
+      if (map) {
+        if (newState) {
+          // Entering fullscreen
+          map.dragPan.enable();
+          map.scrollZoom.enable();
+        } else {
+          // Exiting fullscreen
+          map.dragPan.disable();
+          map.scrollZoom.disable();
+          
+          // Force the map to resize and fit properly
+          if (initialBoundsRef.current) {
+            map.fitBounds(initialBoundsRef.current, { padding: 50 });
+          }
+        }
+        
+        // Always resize the map after toggling fullscreen state
+        map.resize();
+      }
+    }, 10);
+  };
+
+  // Add this useEffect to handle container size changes when fullscreen state changes
+  useEffect(() => {
+    if (!map) return;
+    
+    // Force resize and bounds reset after animation completes
+    const timer = setTimeout(() => {
+      map.resize();
+      if (!isFullscreen && initialBoundsRef.current) {
+        map.fitBounds(initialBoundsRef.current, { padding: 50 });
+      }
+    }, 310); // Just after the 300ms transition completes
+    
+    return () => clearTimeout(timer);
+  }, [isFullscreen, map]);
+
+  // first check the school name from the url
+  useEffect(() => {
+    console.log("window.location.pathname", window.location.pathname);
+    const schoolName = window.location.pathname.split("/")[2].replace("public-school", "ps").replace(/-/g, "_");
+    if (schoolName) {
+      setUrlSchoolName(schoolName);
+      console.log("urlschoolName", schoolName);
+    } else {
+      //add a default school
+      setUrlSchoolName("lindfield_eps");
+    }
+  }, []);
+
   // Function to fetch POIs using Mapbox Geocoding API.
   const fetchPOIs = async (lng: number, lat: number) => {
     const categories = ["other schools", "day care", "shops", "train stations", "beaches"];
@@ -57,7 +120,7 @@ const App: React.FC = () => {
           const coords = feature.geometry.coordinates;
           const el = document.createElement("div");
           // el.style.background = "blue";
-          el.style.backgroundImage = 'url("home.jpg")';
+          el.style.backgroundImage = 'url("home.png")';
           el.style.width = "20px";
           el.style.height = "20px";
           el.style.borderRadius = "50%";
@@ -100,7 +163,7 @@ const App: React.FC = () => {
       );
       const data = await res.json();
       console.log("suburb data", data);
-      const  arr = data.tieredResults[0].results;
+      const arr = data.tieredResults[0].results;
       // Assume the API returns an array of properties in data.properties.
       let i = 0;
       if (arr && Array.isArray(arr)) {
@@ -110,12 +173,12 @@ const App: React.FC = () => {
           const address = property.address
           const lng = address.location.longitude;
           const lat = address.location.latitude;
-         
+
           console.log("property", lng, lat);
-          
+
           if (lng && lat) {
-          
-          console.log("i", i);
+
+            console.log("i", i);
             const el = document.createElement("div");
             // Set the element style to show a home icon (adjust the URL or icon as needed).
             el.style.backgroundImage = 'url("home.png")';
@@ -139,18 +202,23 @@ const App: React.FC = () => {
             titleEl.style.fontWeight = "bold"; // Font weight
             el.appendChild(titleEl); // Add title to the marker element
 
-            el.addEventListener("mouseenter", () => {
+            el.addEventListener(isFullscreen ? "click" : "mouseenter", () => {
               new mapboxgl.Popup({ closeButton: true })
                 .setLngLat([lng, lat])
                 .setHTML(`<div style="padding:5px;">${address.streetAddress || "Property"}</div>`)
                 .addTo(mapRef.current!);
             });
-            el.addEventListener("mouseleave", () => {
-              if ((el as any).currentPopup) {
-                (el as any).currentPopup.remove();
-                (el as any).currentPopup = null;
-              }
-            });
+
+            // Only add mouseleave event if not in fullscreen
+            if (!isFullscreen) {
+              el.addEventListener("mouseleave", () => {
+                if ((el as any).currentPopup) {
+                  (el as any).currentPopup.remove();
+                  (el as any).currentPopup = null;
+                }
+              });
+            }
+
             console.log("address", lng, lat, address);
             const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(mapRef.current!);
             propertyMarkersRef.current.push(marker);
@@ -178,16 +246,6 @@ const App: React.FC = () => {
       fetchPOIs(selectedSchool.coordinates[0], selectedSchool.coordinates[1]);
     });
   };
-// first check the school name from the url
-  useEffect(() => {
-    const schoolName = window.location.pathname.split("/").pop();
-    if (schoolName) {
-      setUrlSchoolName(schoolName);
-    }else{
-      //add a default school
-      setUrlSchoolName("lindfield_eps");
-    }
-  }, []);
 
   useEffect(() => {
     const mapInstance = new mapboxgl.Map({
@@ -195,7 +253,18 @@ const App: React.FC = () => {
       style: mapStyle,
       center: [151.2099, -33.865143],
       zoom: 10,
+      dragPan: false,
+      scrollZoom: false,
+      interactive: false
     });
+
+    // Add zoom controls to bottom right
+    const navigationControl = new mapboxgl.NavigationControl({
+      showCompass: false, // Only show zoom controls, not compass
+      visualizePitch: false
+    });
+    
+    mapInstance.addControl(navigationControl, 'bottom-right');
 
     mapInstance.on("load", () => {
       // Fetch catchments GeoJSON.
@@ -230,6 +299,7 @@ const App: React.FC = () => {
           // Find the matching school feature
           const matchingFeature = data.features.find((feature: any) => {
             const schoolName = feature.properties?.USE_DESC.replace(/\s+/g, '_').toLowerCase();
+            console.log("schoolName", schoolName, urlSchoolName);
             return schoolName === urlSchoolName;
           });
 
@@ -299,6 +369,11 @@ const App: React.FC = () => {
             }
           }
 
+          // After the catchment is loaded and the bounds are set for the first time
+          // Store these bounds as the initial bounds
+          mapInstance.once('moveend', () => {
+            initialBoundsRef.current = mapInstance.getBounds();
+          });
         });
 
       // Add route source and layer.
@@ -323,7 +398,12 @@ const App: React.FC = () => {
   }, [mapStyle, urlSchoolName]);
 
   const handleSearch = async () => {
-    if (destinationQuery.length < 3) return;
+    if (destinationQuery.length < 3) {
+      setSearchResults([]);
+      setSelectedDestination(null);
+      setRouteDetails(null);
+      return;
+    }
     const response = await fetch(
       `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(destinationQuery)}.json?access_token=${mapboxgl.accessToken}`
     );
@@ -377,115 +457,149 @@ const App: React.FC = () => {
     }
   };
 
+  // Add useEffect to handle body scroll when in fullscreen
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isFullscreen]);
+
   return (
-    <div className="max-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
+    <div className="h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl p-4">
-          <div className="mb-8 rounded-xl">
-            <div className="m-4">
-              <h1 className="text-lg font-bold tracking-tight md:text-3xl">
-                Plan School Journey
-              </h1>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Find out the travel time from this school to your important destinations including work, home, train stations, shops, and beaches.
-              </p>
-            </div>
+        <div className="mb-8 rounded-xl">
+          <div className="m-4">
+            <h1 className="text-lg font-bold tracking-tight md:text-3xl">
+              Plan School Journey
+            </h1>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Find out the travel time from this school to your important destinations including work, home, train stations, shops, and beaches.
+            </p>
           </div>
-          <div className="grid sm:grid-cols-2 gap-8  p-4">
+        </div>
+        <div className="grid grid-cols-2 gap-8 p-4">
+          <div className="relative w-full" style={{ aspectRatio: '1/1' }}>
             <div
               ref={mapContainerRef}
-              style={{
-                width: "100%",
-                aspectRatio:1,
-                margin: "0 auto",
-                border: "1px solid #ccc",
-                borderRadius: "10px",
-                overflow: "hidden",
-                position: "relative",
-              }}
+              className={cn(
+                "transition-all duration-300 rounded-lg overflow-hidden border border-gray-200",
+                isFullscreen 
+                  ? "fixed left-0 top-0 right-0 bottom-0 z-[9999] w-screen h-screen rounded-none border-0"
+                  : "absolute inset-0 w-full h-full"
+              )}
+              onClick={!isFullscreen ? toggleFullscreen : undefined}
             />
-            <div className="space-y-6  max-h-[500px] overflow-y-auto hide-scrollbar">
-                    <div className="flex flex-col gap-4">
-                      <div className="relative flex-1">
-                        <Input
-                          type="text"
-                          placeholder="Enter a school address"
-                          value={selectedSchool?.name}
-                          readOnly
-                          className="pl-3"
-                        />
-                      </div>
-                      <div className="relative flex-1">
-                        <Input
-                          type="text"
-                          placeholder="Enter destination address"
-                          value={destinationQuery}
-                          onChange={(e) => {
-                            setDestinationQuery(e.target.value);
-                            handleSearch(); // Trigger search on state change
-                          }}
-                          className="pl-3"
-                        />
-                      </div>
-                    </div>
-                    {searchResults.length > 0 && (
-                      <div className="mt-4">
-                        <ul className="space-y-2">
-                          {searchResults.map((result, index) => (
-                            <li key={index}>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full text-left justify-start h-auto py-3",
-                                  {
-                                    "border-2 border-blue-500": selectedDestination?.id === result.id,
-                                  }
-                                )}
-                                onClick={() => setSelectedDestination(result)}
-                              >
-                                <MapPin className="mr-2 h-4 w-4" />
-                                {result.place_name}
-                              </Button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-               {
-                selectedDestination && (
-                  <Button onClick={handlePlanJourney} className="mt-4 w-full sm:w-auto bg-[#147781] hover:bg-[#147781]/90 text-white">
-                    Show Distance and Time
-                  </Button>
-                )
-               }
-                {routeDetails && (
-                    <div className="">
-                    <div className=" space-x-2">
-                      <span >Travel Time: </span>
-                    </div>
-                    <div className="mt-2">
-                      <span className="font-semibold text-2xl ">{routeDetails.duration}, {routeDetails.distance}</span>
-                    </div>
-                  </div>
-                )}
-                {selectedSchool && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Points of Interest in Catchment</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground mb-4">
-                        See nearby areas of interest such as other schools, day care, shops, train stations, and beaches.
-                      </p>
-                      <Button onClick={toggleMapStyle} variant="outline" className="w-full sm:w-auto">
-                        <Satellite className="mr-2 h-4 w-4" />
-                        Toggle Street / Satellite View
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
+            {!isFullscreen && (
+              <div 
+                className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity duration-200 rounded-lg cursor-pointer"
+                onClick={toggleFullscreen}
+              >
+                <div className="bg-white/90 px-4 py-2 rounded-md text-sm font-medium">
+                  Click to View Fullscreen
+                </div>
               </div>
+            )}
+            {isFullscreen && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFullscreen();
+                }}
+                className="fixed top-4 right-4 z-[10000] bg-white rounded-md p-2 shadow-lg hover:bg-gray-100"
+              >
+                <span className="sr-only">Close fullscreen</span>
+                ✕
+              </button>
+            )}
           </div>
-      
+          <div className="space-y-6  max-h-[500px] overflow-y-auto hide-scrollbar">
+            <div className="flex flex-col gap-2">
+              <div className="relative flex-1">
+                <Input
+                  type="text"
+                  placeholder="Enter a school address"
+                  value={selectedSchool?.name}
+                  readOnly
+                  className="pl-3"
+                />
+              </div>
+              <div className="relative flex-1">
+                <Input
+                  type="text"
+                  placeholder="Enter destination address"
+                  value={destinationQuery}
+                  onChange={(e) => {
+                    setDestinationQuery(e.target.value);
+                    handleSearch(); // Trigger search on state change
+                  }}
+                  className="pl-3"
+                />
+              </div>
+            </div>
+            {searchResults.length > 0 && (
+              <div className="mt-4">
+                <ul className="space-y-2">
+                  {searchResults.map((result, index) => (
+                    <li key={index}>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full text-xs justify-start h-auto py-2 overflow-hidden relative",
+                          {
+                            "border-2 border-blue-500": selectedDestination?.id === result.id,
+                          }
+                        )}
+                        onClick={() => setSelectedDestination(result)}
+                      >
+                        <MapPin className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4" />
+                        <span className="ml-4">{result.place_name}</span>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {
+              selectedDestination && (
+                <Button onClick={handlePlanJourney} className="mt-4 w-full sm:w-auto bg-[#147781] hover:bg-[#147781]/90 text-white">
+                  Show Distance and Time
+                </Button>
+              )
+            }
+            {routeDetails && (
+              <div className="">
+                <div className=" space-x-2">
+                  <span >Travel Time: </span>
+                </div>
+                <div className="mt-2">
+                  <span className="font-semibold text-2xl ">{routeDetails.duration}, {routeDetails.distance}</span>
+                </div>
+              </div>
+            )}
+            {selectedSchool && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm p-0">Points of Interest in Catchment</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-xs mb-4">
+                    See nearby areas of interest such as other schools, day care, shops, train stations, and beaches.
+                  </p>
+                  <Button onClick={toggleMapStyle} variant="outline" className="w-full sm:w-auto">
+                    <Satellite className="mr-2 h-4 w-4" />
+                    <span className="text-xs">Toggle Street / Satellite View</span>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );
