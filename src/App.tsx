@@ -43,6 +43,14 @@ const App: React.FC = () => {
   // Add this new ref to store initial map bounds
   const initialBoundsRef = useRef<mapboxgl.LngLatBounds | null>(null);
 
+  useEffect(() => {
+    // Check if we're on the home route
+    if (window.location.pathname === '/') {
+      // Redirect to the school page
+      window.location.href = '/schools/oakville-public-school/';
+    }
+  }, []);
+  
   // Completely replace the toggleFullscreen function
   const toggleFullscreen = () => {
     const newState = !isFullscreen;
