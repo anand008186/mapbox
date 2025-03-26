@@ -181,54 +181,85 @@ const App: React.FC = () => {
           const address = property.address
           const lng = address.location.longitude;
           const lat = address.location.latitude;
+          
+          const image1 = property.images[0];
+          const image2 = property.images[1];
+          const image3 = property.images[2];
+          
+          const image1url = image1.server + image1.uri;
+          const image2url = image2.server + image2.uri;
+          const image3url = image3.server + image3.uri;
 
           console.log("property", lng, lat);
 
           if (lng && lat) {
-
-            console.log("i", i);
             const el = document.createElement("div");
-            // Set the element style to show a home icon (adjust the URL or icon as needed).
-            el.style.backgroundImage = 'url("home.png")';
-            el.style.width = "24px";
+            
+            // Fix image path and make sure it's in the public folder
+            el.style.backgroundImage = 'url("/home.png")'; // Make sure this path matches your image location
+            el.style.width = "34px";
             el.style.height = "34px";
             el.style.backgroundSize = "contain";
             el.style.backgroundRepeat = "no-repeat";
-            el.style.position = "relative"; // Allow positioning of title
+            el.style.position = "relative";
+            el.style.cursor = "pointer";
 
-            // Create a title element to show the address
-            const titleEl = document.createElement("div");
-            titleEl.innerText = address.streetAddress || "Property";
-            titleEl.style.position = "absolute";
-            titleEl.style.top = "20px"; // Position below the icon
-            titleEl.style.left = "-20px"; // Center the title
-            titleEl.style.whiteSpace = "nowrap"; // Ensure the title is in one line
-            titleEl.style.padding = "2px 5px"; // Padding around the text
-            titleEl.style.borderRadius = "3px"; // Rounded corners
-            titleEl.style.fontSize = "8px"; // Font size
-            titleEl.style.color = "black"; // Font color
-            titleEl.style.fontWeight = "bold"; // Font weight
-            el.appendChild(titleEl); // Add title to the marker element
+            // Create the marker first
+            const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]);
 
-            el.addEventListener(isFullscreen ? "click" : "mouseenter", () => {
-              new mapboxgl.Popup({ closeButton: true })
-                .setLngLat([lng, lat])
-                .setHTML(`<div style="padding:5px;">${address.streetAddress || "Property"}</div>`)
-                .addTo(mapRef.current!);
+            // Create a popup but don't add it to the map yet
+            const popup = new mapboxgl.Popup({
+              closeButton: true,
+              closeOnClick: true,
+              offset: [0, -15], // Offset to position popup above the marker
+              maxWidth: '300px' // Set maximum width for the popup
+            })
+            .setHTML(`
+              <div style="
+                padding: 12px;
+                font-family: system-ui, -apple-system, sans-serif;
+              ">
+                <div style="
+                  font-size: 14px;
+                  margin-bottom: 12px;
+                ">${address.streetAddress}, ${address.suburb} ${address.state} ${address.postcode}</div>
+                
+                <div style="
+                  border-top: 1px solid #eee;
+                  padding-top: 12px;
+                  display: flex;
+                  align-items: center;
+                ">
+                  <img 
+                    src="${image1url || image2url || image3url}"
+                    style="
+                      height: 30px;
+                      margin-right: 8px;
+                      object-fit: contain;
+                    "
+                    alt="${property.agency.name}"
+                  />
+                  <div style="
+                    font-size: 12px;
+                    color: ${'#000000'};
+                  ">${property.agency.name || 'Real Estate Agency'}</div>
+                </div>
+              </div>
+            `);
+
+            // Update the click handler to ensure popups are properly managed
+            el.addEventListener("click", (e) => {
+              e.stopPropagation();
+              
+              // Remove all existing popups
+              document.querySelectorAll('.mapboxgl-popup').forEach(popup => popup.remove());
+              
+              // Add the new popup
+              popup.setLngLat([lng, lat]).addTo(mapRef.current!);
             });
 
-            // Only add mouseleave event if not in fullscreen
-            if (!isFullscreen) {
-              el.addEventListener("mouseleave", () => {
-                if ((el as any).currentPopup) {
-                  (el as any).currentPopup.remove();
-                  (el as any).currentPopup = null;
-                }
-              });
-            }
-
-            console.log("address", lng, lat, address);
-            const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(mapRef.current!);
+            // Add marker to map
+            marker.addTo(mapRef.current!);
             propertyMarkersRef.current.push(marker);
           }
         });
