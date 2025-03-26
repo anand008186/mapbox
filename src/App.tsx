@@ -204,7 +204,6 @@ const App: React.FC = () => {
           const lat = address.location.latitude;
           const websiteLink = property.agency.website;
 
-          console.log("websiteLink", websiteLink);
           
           const image1 = property.images[0];
           const image2 = property.images[1];
@@ -329,8 +328,8 @@ const App: React.FC = () => {
       center: [151.2099, -33.865143],
       zoom: 10,
       dragPan: true,
-      scrollZoom: false,
-      interactive: false
+      scrollZoom: true,
+      interactive: true
     });
 
     // Add zoom controls to bottom right
@@ -376,7 +375,6 @@ const App: React.FC = () => {
             const schoolName = feature.properties?.USE_DESC.replace(/\s+/g, '_').toLowerCase();
             return schoolName === urlSchoolName?.name;
           });
-          console.log("matchingFeature", matchingFeature);
           if (matchingFeature) {
             const centroid = turf.centroid(matchingFeature);
             const coordinates = (centroid.geometry as Point).coordinates as [number, number];
@@ -393,34 +391,34 @@ const App: React.FC = () => {
             el.style.backgroundRepeat = "no-repeat";
             el.style.cursor = "pointer";
 
-            // Create and show popup by default for school marker
-            const schoolPopup = new mapboxgl.Popup({
-              closeButton: true,
-              closeOnClick: false, // Prevent closing when clicking outside
-              offset: [0, -15],
-              className: 'custom-popup'
-            })
-              .setLngLat(coordinates)
-              .setHTML(`
-                <div style="
-                  padding: 12px 16px 8px 8px;
-                  font-family: system-ui, -apple-system, sans-serif;
-                ">
-                  <div style="
-                    font-size: 14px;
-                    font-weight: semibold;
-                    color: #000000;
-                  ">${schoolName}</div>
-                </div>
-              `)
-              .addTo(mapInstance);
+            // // Create and show popup by default for school marker
+            // const schoolPopup = new mapboxgl.Popup({
+            //   closeButton: true,
+            //   closeOnClick: false, // Prevent closing when clicking outside
+            //   offset: [0, -15],
+            //   className: 'custom-popup'
+            // })
+            //   .setLngLat(coordinates)
+            //   .setHTML(`
+            //     <div style="
+            //       padding: 12px 16px 8px 8px;
+            //       font-family: system-ui, -apple-system, sans-serif;
+            //     ">
+            //       <div style="
+            //         font-size: 14px;
+            //         font-weight: semibold;
+            //         color: #000000;
+            //       ">${schoolName}</div>
+            //     </div>
+            //   `)
+            //   .addTo(mapInstance);
             
-            el.addEventListener("click", (e) => {
-              e.stopPropagation();
-              schoolPopup.setLngLat(coordinates).addTo(mapInstance);
-            });
+            // el.addEventListener("click", (e) => {
+            //   e.stopPropagation();
+            //   schoolPopup.setLngLat(coordinates).addTo(mapInstance);
+            // });
 
-            // Add marker to map
+            // // Add marker to map
             new mapboxgl.Marker(el).setLngLat(coordinates).addTo(mapInstance);
 
             // Set selected school and highlight catchment
