@@ -3,11 +3,47 @@ import mapboxgl from "mapbox-gl";
 import * as turf from "@turf/turf";
 import { Point } from "geojson";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/Card";
-import { MapPin, Satellite } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { cn } from "./lib/utils";
+
+// Add custom styles for popups
+const popupStyles = `
+  .mapboxgl-popup {
+    max-width: 300px !important;
+  }
+  
+  .mapboxgl-popup-content {
+    padding: 0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  }
+  
+  .mapboxgl-popup-close-button {
+    padding: 2px 4px !important;
+    font-size: 16px !important;
+    color: #666 !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: color 0.2s !important;
+    outline: none !important;
+  }
+  
+  .mapboxgl-popup-close-button:hover {
+    color: #000 !important;
+  }
+  
+  .custom-popup .mapboxgl-popup-tip {
+    display: none !important;
+  }
+`;
+
+// Add the styles to the document
+const styleSheet = document.createElement("style");
+styleSheet.textContent = popupStyles;
+document.head.appendChild(styleSheet);
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN!;
 
@@ -27,140 +63,125 @@ const App: React.FC = () => {
   const [selectedDestination, setSelectedDestination] = useState<any | null>(null);
   const [routeDetails, setRouteDetails] = useState<{ duration: string; distance: string } | null>(null);
   const [selectedSchool, setSelectedSchool] = useState<SelectedSchool | null>(null);
-  const [mapStyle, setMapStyle] = useState<string>("mapbox://styles/mapbox/streets-v12");
-  const [urlSchoolName, setUrlSchoolName] = useState<string | null>(null);
+  const [mapStyle, _setMapStyle] = useState<string>("mapbox://styles/mapbox/streets-v12");
+  const [urlSchoolName, setUrlSchoolName] = useState<{name: string, suburb: string} | null>(null);
 
   // Ref to store fetched catchments GeoJSON.
   const catchmentsRef = useRef<any>(null);
   // Ref to store POI markers so we can remove them when needed.
-  const poiMarkersRef = useRef<mapboxgl.Marker[]>([]);
+  // const poiMarkersRef = useRef<mapboxgl.Marker[]>([]);
   // New ref: property markers (home icons)
   const propertyMarkersRef = useRef<mapboxgl.Marker[]>([]);
 
-  // First, add a new state for fullscreen mode
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Remove isFullscreen state and related code
+  // const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Add this new ref to store initial map bounds
-  const initialBoundsRef = useRef<mapboxgl.LngLatBounds | null>(null);
-
+  // Remove iframe-specific useEffect
   useEffect(() => {
-    // Check if we're on the home route
-    if (window.location.pathname === '/') {
-      // Redirect to the school page
-      window.location.href = '/schools/oakville-public-school/';
+    // Check if running in iframe
+    const isInIframe = window !== window.parent;
+    
+    if (isInIframe) {
+      // Adjust styles for iframe context
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      document.body.style.overflow = 'hidden';
     }
+    
+    return () => {
+      if (isInIframe) {
+        document.body.style.margin = '';
+        document.body.style.padding = '';
+        document.body.style.overflow = '';
+      }
+    };
   }, []);
-  
-  // Completely replace the toggleFullscreen function
-  const toggleFullscreen = () => {
-    const newState = !isFullscreen;
-    setIsFullscreen(newState);
-    
-    // Use setTimeout to ensure state has updated before we manipulate the DOM
-    setTimeout(() => {
-      if (map) {
-        if (newState) {
-          // Entering fullscreen
-          map.dragPan.enable();
-          map.scrollZoom.enable();
-        } else {
-          // Exiting fullscreen
-          map.dragPan.disable();
-          map.scrollZoom.disable();
-          
-          // Force the map to resize and fit properly
-          if (initialBoundsRef.current) {
-            map.fitBounds(initialBoundsRef.current, { padding: 50 });
-          }
-        }
-        
-        // Always resize the map after toggling fullscreen state
-        map.resize();
-      }
-    }, 10);
-  };
 
-  // Add this useEffect to handle container size changes when fullscreen state changes
+  // Separate the URL parameter handling and fullscreen detection into two different effects
   useEffect(() => {
-    if (!map) return;
-    
-    // Force resize and bounds reset after animation completes
-    const timer = setTimeout(() => {
-      map.resize();
-      if (!isFullscreen && initialBoundsRef.current) {
-        map.fitBounds(initialBoundsRef.current, { padding: 50 });
-      }
-    }, 310); // Just after the 300ms transition completes
-    
-    return () => clearTimeout(timer);
-  }, [isFullscreen, map]);
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const schoolParam = urlParams.get('school');
+      const suburbParam = urlParams.get('suburb');
 
-  // first check the school name from the url
-  useEffect(() => {
-    console.log("window.location.pathname", window.location.pathname);
-    const schoolName = window.location.pathname.split("/")[2].replace("public-school", "ps").replace(/-/g, "_");
-    if (schoolName) {
-      setUrlSchoolName(schoolName);
-      console.log("urlschoolName", schoolName);
-    } else {
-      //add a default school
-      setUrlSchoolName("lindfield_eps");
+      if (schoolParam) {
+        const formattedSchoolName = schoolParam
+          .toLowerCase()
+          .replace('public-school', 'ps')
+          .replace(/-/g, '_');
+
+        setUrlSchoolName({
+          name: formattedSchoolName,
+          suburb: suburbParam || ''
+        });
+      } else {
+        setUrlSchoolName({
+          name: 'oakville_ps',
+          suburb: '2765'
+        });
+      }
+    } catch (error) {
+      console.error("Error parsing URL parameters:", error);
+      setUrlSchoolName({
+        name: 'oakville_ps',
+        suburb: '2765'
+      });
     }
-  }, []);
+  }, []); // Empty dependency array as this should only run once on mount
 
   // Function to fetch POIs using Mapbox Geocoding API.
-  const fetchPOIs = async (lng: number, lat: number) => {
-    const categories = ["other schools", "day care", "shops", "train stations", "beaches"];
-    // Remove existing POI markers.
-    poiMarkersRef.current.forEach(marker => marker.remove());
-    poiMarkersRef.current = [];
-    const newMarkers: mapboxgl.Marker[] = [];
-    for (const cat of categories) {
-      try {
-        const res = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cat)}.json?proximity=${lat},${lng}&access_token=${mapboxgl.accessToken}`
-        );
-        const data = await res.json();
-        // Use the first 2 results for each category.
-        console.log("data", data);
-        const features = data.features.slice(0, 2);
-        features.forEach((feature: any) => {
-          const coords = feature.geometry.coordinates;
-          const el = document.createElement("div");
-          // el.style.background = "blue";
-          el.style.backgroundImage = 'url("home.png")';
-          el.style.width = "20px";
-          el.style.height = "20px";
-          el.style.borderRadius = "50%";
-          el.style.display = "flex";
-          el.style.alignItems = "center";
-          el.style.justifyContent = "center";
-          el.style.color = "white";
-          el.style.fontSize = "10px";
-          el.innerText = cat.charAt(0).toUpperCase();
-          const marker = new mapboxgl.Marker(el).setLngLat(coords).addTo(mapRef.current!);
-          newMarkers.push(marker);
-        });
-      } catch (err) {
-        console.error("Error fetching POIs for category", cat, err);
-      }
-    }
-    poiMarkersRef.current = newMarkers;
-    // Adjust the map bounds to include the selected school and all POI markers.
-    const bounds = new mapboxgl.LngLatBounds();
-    bounds.extend([lng, lat]);
-    newMarkers.forEach(marker => bounds.extend(marker.getLngLat()));
-    map!.fitBounds(bounds, { padding: 50 });
-  };
+  // const fetchPOIs = async (lng: number, lat: number) => {
+  //   const categories = ["other schools", "day care", "shops", "train stations", "beaches"];
+  //   // Remove existing POI markers.
+  //   poiMarkersRef.current.forEach(marker => marker.remove());
+  //   poiMarkersRef.current = [];
+  //   const newMarkers: mapboxgl.Marker[] = [];
+  //   for (const cat of categories) {
+  //     try {
+  //       const res = await fetch(
+  //         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cat)}.json?proximity=${lat},${lng}&access_token=${mapboxgl.accessToken}`
+  //       );
+  //       const data = await res.json();
+  //       // Use the first 2 results for each category.
+  //       console.log("data", data);
+  //       const features = data.features.slice(0, 2);
+  //       features.forEach((feature: any) => {
+  //         const coords = feature.geometry.coordinates;
+  //         const el = document.createElement("div");
+  //         // el.style.background = "blue";
+  //         el.style.backgroundImage = 'url("home.png")';
+  //         el.style.width = "20px";
+  //         el.style.height = "20px";
+  //         el.style.borderRadius = "50%";
+  //         el.style.display = "flex";
+  //         el.style.alignItems = "center";
+  //         el.style.justifyContent = "center";
+  //         el.style.color = "white";
+  //         el.style.fontSize = "10px";
+  //         el.innerText = cat.charAt(0).toUpperCase();
+  //         const marker = new mapboxgl.Marker(el).setLngLat(coords).addTo(mapRef.current!);
+  //         newMarkers.push(marker);
+  //       });
+  //     } catch (err) {
+  //       console.error("Error fetching POIs for category", cat, err);
+  //     }
+  //   }
+  //   poiMarkersRef.current = newMarkers;
+  //   // Adjust the map bounds to include the selected school and all POI markers.
+  //   const bounds = new mapboxgl.LngLatBounds();
+  //   bounds.extend([lng, lat]);
+  //   newMarkers.forEach(marker => bounds.extend(marker.getLngLat()));
+  //   map!.fitBounds(bounds, { padding: 50 });
+  // };
 
   // Function to fetch property listings for a given suburb.
-  const fetchPropertiesForSuburb = async (suburb: string) => {
+  const fetchPropertiesForSuburb = async () => {
     // Remove existing property markers.
     propertyMarkersRef.current.forEach(marker => marker.remove());
     propertyMarkersRef.current = [];
     try {
       const url = `https://zylalabs.com/api/1476/australia+realty+api/1221/get+properties+list?channel=buy&searchLocation=${encodeURIComponent(
-        suburb
+        urlSchoolName?.suburb || ""
       )}&searchLocationSubtext=Region&type=region`;
       // add auth headers
       const res = await fetch(url, {
@@ -181,6 +202,9 @@ const App: React.FC = () => {
           const address = property.address
           const lng = address.location.longitude;
           const lat = address.location.latitude;
+          const websiteLink = property.agency.website;
+
+          console.log("websiteLink", websiteLink);
           
           const image1 = property.images[0];
           const image2 = property.images[1];
@@ -207,26 +231,27 @@ const App: React.FC = () => {
             // Create the marker first
             const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]);
 
-            // Create a popup but don't add it to the map yet
+            // Create a popup for property markers
             const popup = new mapboxgl.Popup({
               closeButton: true,
-              closeOnClick: true,
-              offset: [0, -15], // Offset to position popup above the marker
-              maxWidth: '300px' // Set maximum width for the popup
+              closeOnClick: true, // Allow closing when clicking outside
+              offset: [0, -15],
+              className: 'custom-popup school-popup',
+              maxWidth: '300px'
             })
             .setHTML(`
               <div style="
-                padding: 12px;
+                padding: 16px;
                 font-family: system-ui, -apple-system, sans-serif;
               ">
                 <div style="
-                  font-size: 14px;
-                  margin-bottom: 12px;
+                  font-size: 10px;
+                  margin-bottom: 10px;
                 ">${address.streetAddress}, ${address.suburb} ${address.state} ${address.postcode}</div>
                 
                 <div style="
                   border-top: 1px solid #eee;
-                  padding-top: 12px;
+                  padding-top: 8px;
                   display: flex;
                   align-items: center;
                 ">
@@ -239,20 +264,31 @@ const App: React.FC = () => {
                     "
                     alt="${property.agency.name}"
                   />
-                  <div style="
-                    font-size: 12px;
+                  <a style="
+                    font-size: 10px;
                     color: ${'#000000'};
-                  ">${property.agency.name || 'Real Estate Agency'}</div>
+                    text-decoration: underline;
+                    font-weight: semibold;
+                    cursor: pointer;
+                    outline: none;
+                    border: none;
+                    background: none;
+                    padding: 0;
+                    margin: 0;
+                    font-family: system-ui, -apple-system, sans-serif;
+                    
+
+                  "
+                  href="${websiteLink}"
+                  target="_blank"
+                  >${property.agency.name || 'Real Estate Agency'}</a>
                 </div>
               </div>
             `);
 
-            // Update the click handler to ensure popups are properly managed
+            // Update the click handler for property markers
             el.addEventListener("click", (e) => {
               e.stopPropagation();
-              
-              // Remove all existing popups
-              document.querySelectorAll('.mapboxgl-popup').forEach(popup => popup.remove());
               
               // Add the new popup
               popup.setLngLat([lng, lat]).addTo(mapRef.current!);
@@ -265,26 +301,26 @@ const App: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error("Error fetching properties for suburb:", suburb, error);
+      console.error("Error fetching properties for suburb:", urlSchoolName?.suburb, error);
     }
   };
 
   // Toggle map style and fly to the selected school.
-  const toggleMapStyle = () => {
-    if (!map || !selectedSchool) return;
-    const newStyle =
-      mapStyle === "mapbox://styles/mapbox/streets-v12"
-        ? "mapbox://styles/mapbox/satellite-v9"
-        : "mapbox://styles/mapbox/streets-v12";
-    setMapStyle(newStyle);
-    map.setStyle(newStyle);
-    // Wait for the style to load, then fly to the selected school.
-    map.once("styledata", () => {
-      map.flyTo({ center: selectedSchool.coordinates, zoom: 15 });
-      // Optionally, fetch POIs for the selected school.
-      fetchPOIs(selectedSchool.coordinates[0], selectedSchool.coordinates[1]);
-    });
-  };
+  // const toggleMapStyle = () => {
+  //   if (!map || !selectedSchool) return;
+  //   const newStyle =
+  //     mapStyle === "mapbox://styles/mapbox/streets-v12"
+  //       ? "mapbox://styles/mapbox/satellite-v9"
+  //       : "mapbox://styles/mapbox/streets-v12";
+  //   setMapStyle(newStyle);
+  //   map.setStyle(newStyle);
+  //   // Wait for the style to load, then fly to the selected school.
+  //   map.once("styledata", () => {
+  //     map.flyTo({ center: selectedSchool.coordinates, zoom: 15 });
+  //     // Optionally, fetch POIs for the selected school.
+  //     fetchPOIs(selectedSchool.coordinates[0], selectedSchool.coordinates[1]);
+  //   });
+  // };
 
   useEffect(() => {
     const mapInstance = new mapboxgl.Map({
@@ -338,15 +374,14 @@ const App: React.FC = () => {
           // Find the matching school feature
           const matchingFeature = data.features.find((feature: any) => {
             const schoolName = feature.properties?.USE_DESC.replace(/\s+/g, '_').toLowerCase();
-            console.log("schoolName", schoolName, urlSchoolName);
-            return schoolName === urlSchoolName;
+            return schoolName === urlSchoolName?.name;
           });
-
+          console.log("matchingFeature", matchingFeature);
           if (matchingFeature) {
             const centroid = turf.centroid(matchingFeature);
             const coordinates = (centroid.geometry as Point).coordinates as [number, number];
             const schoolName = matchingFeature.properties?.USE_DESC;
-            const suburb = matchingFeature.properties?.suburb || schoolName.split(" PS")[0];
+            const suburb = urlSchoolName?.suburb || matchingFeature.properties?.suburb || schoolName.split(" PS")[0];
 
             // Create marker for the selected school
             const el = document.createElement("div");
@@ -358,22 +393,31 @@ const App: React.FC = () => {
             el.style.backgroundRepeat = "no-repeat";
             el.style.cursor = "pointer";
 
-            // Show popup on hover
-            el.addEventListener("mouseenter", () => {
-              const popup = new mapboxgl.Popup({
-                closeButton: false,
-                closeOnClick: false,
-              })
-                .setLngLat(coordinates)
-                .setHTML(`<div style="padding: 5px; font-size: 14px;">${schoolName}</div>`)
-                .addTo(mapInstance);
-              (el as any).currentPopup = popup;
-            });
-            el.addEventListener("mouseleave", () => {
-              if ((el as any).currentPopup) {
-                (el as any).currentPopup.remove();
-                (el as any).currentPopup = null;
-              }
+            // Create and show popup by default for school marker
+            const schoolPopup = new mapboxgl.Popup({
+              closeButton: true,
+              closeOnClick: false, // Prevent closing when clicking outside
+              offset: [0, -15],
+              className: 'custom-popup'
+            })
+              .setLngLat(coordinates)
+              .setHTML(`
+                <div style="
+                  padding: 12px 16px 8px 8px;
+                  font-family: system-ui, -apple-system, sans-serif;
+                ">
+                  <div style="
+                    font-size: 14px;
+                    font-weight: semibold;
+                    color: #000000;
+                  ">${schoolName}</div>
+                </div>
+              `)
+              .addTo(mapInstance);
+            
+            el.addEventListener("click", (e) => {
+              e.stopPropagation();
+              schoolPopup.setLngLat(coordinates).addTo(mapInstance);
             });
 
             // Add marker to map
@@ -396,23 +440,11 @@ const App: React.FC = () => {
             }
             mapInstance.fitBounds(bounds, { padding: 50 });
 
-            // Show popup for the school
-            new mapboxgl.Popup({ closeButton: true })
-              .setLngLat(coordinates)
-              .setHTML(`<div style="background-color: transparent; padding: 0px 0px; font-size: 12px; font-weight: bold; color: #000000;">${schoolName}</div>`)
-              .addTo(mapInstance);
-
             // Fetch properties for the suburb
             if (suburb) {
-              fetchPropertiesForSuburb(suburb);
+              fetchPropertiesForSuburb();
             }
           }
-
-          // After the catchment is loaded and the bounds are set for the first time
-          // Store these bounds as the initial bounds
-          mapInstance.once('moveend', () => {
-            initialBoundsRef.current = mapInstance.getBounds();
-          });
         });
 
       // Add route source and layer.
@@ -496,18 +528,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Add useEffect to handle body scroll when in fullscreen
-  useEffect(() => {
-    if (isFullscreen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, [isFullscreen]);
-
   return (
     <div className="h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl p-4">
@@ -525,36 +545,8 @@ const App: React.FC = () => {
           <div className="relative w-full" style={{ aspectRatio: '1/1' }}>
             <div
               ref={mapContainerRef}
-              className={cn(
-                "transition-all duration-300 rounded-lg overflow-hidden border border-gray-200",
-                isFullscreen 
-                  ? "fixed left-0 top-0 right-0 bottom-0 z-[9999] w-screen h-screen rounded-none border-0"
-                  : "absolute inset-0 w-full h-full"
-              )}
-              onClick={!isFullscreen ? toggleFullscreen : undefined}
+              className="absolute inset-0 w-full h-full rounded-lg overflow-hidden border border-gray-200"
             />
-            {!isFullscreen && (
-              <div 
-                className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity duration-200 rounded-lg cursor-pointer"
-                onClick={toggleFullscreen}
-              >
-                <div className="bg-white/90 px-4 py-2 rounded-md text-sm font-medium">
-                  Click to View Fullscreen
-                </div>
-              </div>
-            )}
-            {isFullscreen && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFullscreen();
-                }}
-                className="fixed top-4 right-4 z-[10000] bg-white rounded-md p-2 shadow-lg hover:bg-gray-100"
-              >
-                <span className="sr-only">Close fullscreen</span>
-                ✕
-              </button>
-            )}
           </div>
           <div className="space-y-6  max-h-[500px] overflow-y-auto hide-scrollbar">
             <div className="flex flex-col gap-2">
@@ -620,7 +612,7 @@ const App: React.FC = () => {
                 </div>
               </div>
             )}
-            {selectedSchool && (
+            {/* {selectedSchool && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm p-0">Points of Interest in Catchment</CardTitle>
@@ -635,7 +627,7 @@ const App: React.FC = () => {
                   </Button>
                 </CardContent>
               </Card>
-            )}
+            )} */}
           </div>
         </div>
 
