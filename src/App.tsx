@@ -328,7 +328,7 @@ const App: React.FC = () => {
       style: mapStyle,
       center: [151.2099, -33.865143],
       zoom: 10,
-      dragPan: false,
+      dragPan: true,
       scrollZoom: false,
       interactive: false
     });
@@ -584,10 +584,13 @@ const App: React.FC = () => {
                           {
                             "border-2 border-blue-500": selectedDestination?.id === result.id,
                           }
+
+
                         )}
                         onClick={() => {
-                          setSelectedDestination(result);
                           setDestinationQuery(result.place_name);
+                          setSearchResults([]);
+                          setSelectedDestination(result);
                         }}
                       >
                         <MapPin className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4" />
