@@ -175,13 +175,14 @@ const App: React.FC = () => {
   // };
 
   // Function to fetch property listings for a given suburb.
+  // Function to fetch property listings for a given suburb.
   const fetchPropertiesForSuburb = async () => {
     // Remove existing property markers.
     propertyMarkersRef.current.forEach(marker => marker.remove());
     propertyMarkersRef.current = [];
     try {
       const url = `https://zylalabs.com/api/1476/australia+realty+api/1221/get+properties+list?channel=buy&searchLocation=${encodeURIComponent(
-        urlSchoolName?.suburb || ""
+        urlSchoolName?.suburb || ''
       )}&searchLocationSubtext=Region&type=region`;
       // add auth headers
       const res = await fetch(url, {
@@ -191,14 +192,11 @@ const App: React.FC = () => {
       }
       );
       const data = await res.json();
-      console.log("suburb data", data);
-      const arr = data.tieredResults[0].results;
+      const  arr = data.tieredResults[0].results;
       // Assume the API returns an array of properties in data.properties.
-      let i = 0;
       if (arr && Array.isArray(arr)) {
         arr.forEach((property: any) => {
           // Assuming each property has longitude and latitude fields.
-          i++;
           const address = property.address
           const lng = address.location.longitude;
           const lat = address.location.latitude;
@@ -216,30 +214,25 @@ const App: React.FC = () => {
           console.log("property", lng, lat);
 
           if (lng && lat) {
-            const el = document.createElement("div");
             
-            // Fix image path and make sure it's in the public folder
-            el.style.backgroundImage = 'url("/home.png")'; // Make sure this path matches your image location
-            el.style.width = "34px";
-            el.style.height = "34px";
+            const el = document.createElement("div");
+            // Set the element style to show a home icon (adjust the URL or icon as needed).
+            // el.style.backgroundImage = 'url("home-icon.png")';
+            // el.style.background = "blue";
+            el.style.backgroundImage = 'url("home.png")';
+            // el.style.border = "2px solid white";
+            el.style.width = "24px";
+            el.style.height = "24px";
             el.style.backgroundSize = "contain";
             el.style.backgroundRepeat = "no-repeat";
-            el.style.position = "relative";
             el.style.cursor = "pointer";
-
-            // Create the marker first
-            const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]);
-
-            // Create a popup for property markers
-            const popup = new mapboxgl.Popup({
-              closeButton: true,
-              closeOnClick: true, // Allow closing when clicking outside
-              offset: [0, -15],
-              className: 'custom-popup school-popup',
-              maxWidth: '300px'
-            })
-            .setHTML(`
-              <div style="
+            // Optionally, add a title or event listener.
+            el.title = address.streetAddress || "Property";
+            el.addEventListener("mouseenter", () => {
+              new mapboxgl.Popup({ closeButton: true })
+                .setLngLat([lng, lat])
+                .setHTML(`
+                       <div style="
                 padding: 16px;
                 font-family: system-ui, -apple-system, sans-serif;
               ">
@@ -282,19 +275,17 @@ const App: React.FC = () => {
                   target="_blank"
                   >${property.agency.name || 'Real Estate Agency'}</a>
                 </div>
-              </div>
-            `);
-
-            // Update the click handler for property markers
-            el.addEventListener("click", (e) => {
-              e.stopPropagation();
-              
-              // Add the new popup
-              popup.setLngLat([lng, lat]).addTo(mapRef.current!);
+              </div>`)
+                .addTo(mapRef.current!);
             });
-
-            // Add marker to map
-            marker.addTo(mapRef.current!);
+            el.addEventListener("mouseleave", () => {
+              if ((el as any).currentPopup) {
+                (el as any).currentPopup.remove();
+                (el as any).currentPopup = null;
+              }
+            });
+            console.log("address", lng, lat, address);
+            const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(mapRef.current!);
             propertyMarkersRef.current.push(marker);
           }
         });
