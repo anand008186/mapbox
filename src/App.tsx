@@ -479,7 +479,7 @@ const App: React.FC = () => {
       `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(destinationQuery)}.json?access_token=${mapboxgl.accessToken}`
     );
     const data = await response.json();
-    setSearchResults(data.features);
+    setSearchResults(data.features.slice(0, 3));
   };
 
   const handlePlanJourney = async () => {
@@ -529,10 +529,10 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl p-4">
-        <div className="mb-8 rounded-xl">
-          <div className="m-4">
+    <div className="h-screen bg-background py-8">
+      <div className="mx-auto max-w-5xl ">
+        <div className="mb-8  rounded-xl">
+          <div className="m-2">
             <h1 className="text-lg font-bold tracking-tight md:text-3xl">
               Plan School Journey
             </h1>
@@ -541,7 +541,7 @@ const App: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-8 p-4">
+        <div className="grid grid-cols-2 gap-2 p-4">
           <div className="relative w-full" style={{ aspectRatio: '1/1' }}>
             <div
               ref={mapContainerRef}
@@ -585,7 +585,10 @@ const App: React.FC = () => {
                             "border-2 border-blue-500": selectedDestination?.id === result.id,
                           }
                         )}
-                        onClick={() => setSelectedDestination(result)}
+                        onClick={() => {
+                          setSelectedDestination(result);
+                          setDestinationQuery(result.place_name);
+                        }}
                       >
                         <MapPin className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4" />
                         <span className="ml-4">{result.place_name}</span>
