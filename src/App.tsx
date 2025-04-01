@@ -80,7 +80,7 @@ document.head.appendChild(styleSheet);
   }, []); // Empty dependency array as this should only run once on mount
 
   return (
-    <div className="h-screen bg-background py-2">
+    <div className="h-screen bg-background p-4">
       <div className="mx-auto max-w-5xl">
         {/* Tab Navigation */}
         <div className="border-b border-gray-200">

@@ -420,22 +420,22 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
         alert("No routes found for the selected destination.");
         return;
       }
-      // const routeSource = map.getSource("route") as mapboxgl.GeoJSONSource;
-      // if (routeSource) {
-      //   routeSource.setData({
-      //     type: "FeatureCollection",
-      //     features: [{ type: "Feature", geometry: route.geometry, properties: {} }],
-      //   });
-      // }
+      const routeSource = map.getSource("route") as mapboxgl.GeoJSONSource;
+      if (routeSource) {
+        routeSource.setData({
+          type: "FeatureCollection",
+          features: [{ type: "Feature", geometry: route.geometry, properties: {} }],
+        });
+      }
       setRouteDetails({
         duration: `${Math.round(route.duration / 60)} minutes`,
         distance: `${(route.distance / 1000).toFixed(2)} km`,
       });
-      // const bounds = new mapboxgl.LngLatBounds();
-      // route.geometry.coordinates.forEach((coord: number[]) => {
-      //   bounds.extend(coord as [number, number]);
-      // });
-      // map.fitBounds(bounds, { padding: 50 });
+      const bounds = new mapboxgl.LngLatBounds();
+      route.geometry.coordinates.forEach((coord: number[]) => {
+        bounds.extend(coord as [number, number]);
+      });
+      map.fitBounds(bounds, { padding: 50 });
     } catch (error) {
       alert("An error occurred while calculating the route. Please try again.");
     }
