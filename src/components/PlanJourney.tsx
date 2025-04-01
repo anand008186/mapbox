@@ -379,7 +379,7 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
     mapRef.current = mapInstance;
 
     return () => mapInstance.remove();
-  }, [mapStyle, urlSchoolName]);
+  }, [mapStyle, urlSchoolName, routeDetails]);
 
   const handleSearch = async () => {
     if (destinationQuery.length < 3) {

@@ -7,7 +7,6 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'journey' | 'houses'>('journey');
   // Keep the shared state here (selectedSchool, urlSchoolName)
   const [urlSchoolName, setUrlSchoolName] = useState<{name: string, suburb: string} | null>(null);
-  const [selectedSchool, _setSelectedSchool] = useState<{name: string, suburb: string} | null>(null);
 
   // Add custom styles for popups
 const popupStyles = `
@@ -118,7 +117,6 @@ document.head.appendChild(styleSheet);
             />
           ) : (
             <NearbyHouses
-              selectedSchool={selectedSchool}
               urlSchoolName={urlSchoolName}
             />
           )}
