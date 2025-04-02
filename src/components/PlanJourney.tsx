@@ -379,7 +379,7 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
     mapRef.current = mapInstance;
 
     return () => mapInstance.remove();
-  }, [mapStyle, urlSchoolName, routeDetails]);
+  }, [mapStyle, urlSchoolName, ]);
 
   const handleSearch = async () => {
     if (destinationQuery.length < 3) {
@@ -441,6 +441,55 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
     }
   };
 
+  // Add this function after your existing state declarations
+  const focusOnCatchment = () => {
+    if (!mapRef.current || !catchmentsRef.current) return;
+
+    const matchingFeature = catchmentsRef.current.features.find((feature: any) => {
+      const schoolName = feature.properties?.USE_DESC.replace(/\s+/g, '_').toLowerCase();
+      return schoolName === urlSchoolName?.name;
+    });
+
+    if (matchingFeature) {
+      const bounds = new mapboxgl.LngLatBounds();
+      if (matchingFeature.geometry.type === "Polygon") {
+        matchingFeature.geometry.coordinates[0].forEach((coord: number[]) => {
+          bounds.extend(coord as [number, number]);
+        });
+      } else if (matchingFeature.geometry.type === "MultiPolygon") {
+        matchingFeature.geometry.coordinates[0][0].forEach((coord: number[]) => {
+          bounds.extend(coord as [number, number]);
+        });
+      }
+      mapRef.current.fitBounds(bounds, { padding: 50 });
+    }
+  };
+
+  // Add a useEffect to watch for routeDetails changes
+  useEffect(() => {
+    if (!routeDetails) {
+      focusOnCatchment();
+    }
+  }, [routeDetails]);
+
+  // Add this useEffect to watch for destination changes
+  useEffect(() => {
+    if (!selectedDestination && mapRef.current) {
+      // Clear the route from the map
+      const routeSource = mapRef.current.getSource("route") as mapboxgl.GeoJSONSource;
+      if (routeSource) {
+        routeSource.setData({
+          type: "FeatureCollection",
+          features: []
+        });
+      }
+      // Clear route details
+      setRouteDetails(null);
+      // Refocus on catchment
+      focusOnCatchment();
+    }
+  }, [selectedDestination]);
+
   return (
     <div className="h-screen bg-background py-4">
       <div className="mx-auto max-w-5xl ">
@@ -454,7 +503,7 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 px-4">
+        <div className="grid grid-cols-1 min-[575px]:grid-cols-2 gap-6 px-4">
           <div className="relative w-full" style={{ aspectRatio: '1/1' }}>
             <div
               ref={mapContainerRef}
