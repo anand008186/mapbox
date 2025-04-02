@@ -92,56 +92,56 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
           if (!mapInstance.getSource("catchments")) {
             mapInstance.addSource("catchments", { type: "geojson", data });
           }
-          // // Add catchment layer.
-          // if (!mapInstance.getLayer("catchment-layer")) {
-          //   // Add fill layer first
-          //   mapInstance.addLayer({
-          //     id: "catchment-layer-fill",
-          //     type: "fill",
-          //     source: "catchments",
-          //     paint: { 
-          //       "fill-color": "#CCCCCC",
-          //       "fill-opacity": 0.05
-          //     },
-          //   });
-          //   // Add line layer on top
-          //   mapInstance.addLayer({
-          //     id: "catchment-layer-line",
-          //     type: "line",
-          //     source: "catchments",
-          //     paint: { 
-          //       "line-color": "#CCCCCC",
-          //       "line-width": 1,
-          //       "line-opacity": 0.8
-          //     },
-          //   });
-          // }
-          // // Add highlighted catchments layer.
-          // if (!mapInstance.getLayer("highlighted-catchments")) {
-          //   // Add fill layer first
-          //   mapInstance.addLayer({
-          //     id: "highlighted-catchments-fill",
-          //     type: "fill",
-          //     source: "catchments",
-          //     paint: { 
-          //       "fill-color": "#137780",
-          //       "fill-opacity": 0.1
-          //     },
-          //     filter: ["in", "USE_DESC", ""],
-          //   });
-          //   // Add line layer on top
-          //   mapInstance.addLayer({
-          //     id: "highlighted-catchments-line",
-          //     type: "line",
-          //     source: "catchments",
-          //     paint: { 
-          //       "line-color": "#137780",
-          //       "line-width": 3,
-          //       "line-opacity": 1
-          //     },
-          //     filter: ["in", "USE_DESC", ""],
-          //   });
-          // }
+          // Add catchment layer.
+          if (!mapInstance.getLayer("catchment-layer")) {
+            // Add fill layer first
+            mapInstance.addLayer({
+              id: "catchment-layer-fill",
+              type: "fill",
+              source: "catchments",
+              paint: { 
+                "fill-color": "#CCCCCC",
+                "fill-opacity": 0.05
+              },
+            });
+            // Add line layer on top
+            mapInstance.addLayer({
+              id: "catchment-layer-line",
+              type: "line",
+              source: "catchments",
+              paint: { 
+                "line-color": "#CCCCCC",
+                "line-width": 1,
+                "line-opacity": 0.8
+              },
+            });
+          }
+          // Add highlighted catchments layer.
+          if (!mapInstance.getLayer("highlighted-catchments")) {
+            // Add fill layer first
+            mapInstance.addLayer({
+              id: "highlighted-catchments-fill",
+              type: "fill",
+              source: "catchments",
+              paint: { 
+                "fill-color": "#137780",
+                "fill-opacity": 0.1
+              },
+              filter: ["in", "USE_DESC", ""],
+            });
+            // Add line layer on top
+            mapInstance.addLayer({
+              id: "highlighted-catchments-line",
+              type: "line",
+              source: "catchments",
+              paint: { 
+                "line-color": "#137780",
+                "line-width": 3,
+                "line-opacity": 1
+              },
+              filter: ["in", "USE_DESC", ""],
+            });
+          }
 
           // Find the matching school feature
           const matchingFeature = data.features.find((feature: any) => {
