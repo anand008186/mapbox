@@ -14,6 +14,43 @@ interface NearbyHousesProps {
 //   suburb: string;
 // }
 
+
+interface Property {
+  address: {
+    streetAddress: string;
+    suburb: string;
+    state: string;
+    postcode: string;
+    location: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  images: Array<{
+    server: string;
+    uri: string;
+  }>;
+  agency: {
+    name: string;
+    website: string;
+  };
+  prettyUrl: string;
+  generalFeatures: {
+    bedrooms: {
+      value: number;
+    };
+    bathrooms: {
+      value: number;
+    };
+    carSpaces: {
+      value: number;
+    };
+  };
+  price: {
+    display: string;
+  };
+}
+
 export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const [_map, setMap] = useState<mapboxgl.Map | null>(null);
@@ -22,6 +59,9 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
   const [mapStyle, _setMapStyle] = useState<string>('mapbox://styles/mapbox/standard')
 
   const catchmentsRef = useRef<GeoJSON.FeatureCollection | null>(null);
+
+  // Add new state for properties
+  const [properties, setProperties] = useState<Property[]>([]);
 
   useEffect(() => {
     const mapInstance = new mapboxgl.Map({
@@ -52,56 +92,56 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
           if (!mapInstance.getSource("catchments")) {
             mapInstance.addSource("catchments", { type: "geojson", data });
           }
-          // Add catchment layer.
-          if (!mapInstance.getLayer("catchment-layer")) {
-            // Add fill layer first
-            mapInstance.addLayer({
-              id: "catchment-layer-fill",
-              type: "fill",
-              source: "catchments",
-              paint: { 
-                "fill-color": "#CCCCCC",
-                "fill-opacity": 0.05
-              },
-            });
-            // Add line layer on top
-            mapInstance.addLayer({
-              id: "catchment-layer-line",
-              type: "line",
-              source: "catchments",
-              paint: { 
-                "line-color": "#CCCCCC",
-                "line-width": 1,
-                "line-opacity": 0.8
-              },
-            });
-          }
-          // Add highlighted catchments layer.
-          if (!mapInstance.getLayer("highlighted-catchments")) {
-            // Add fill layer first
-            mapInstance.addLayer({
-              id: "highlighted-catchments-fill",
-              type: "fill",
-              source: "catchments",
-              paint: { 
-                "fill-color": "#137780",
-                "fill-opacity": 0.1
-              },
-              filter: ["in", "USE_DESC", ""],
-            });
-            // Add line layer on top
-            mapInstance.addLayer({
-              id: "highlighted-catchments-line",
-              type: "line",
-              source: "catchments",
-              paint: { 
-                "line-color": "#137780",
-                "line-width": 3,
-                "line-opacity": 1
-              },
-              filter: ["in", "USE_DESC", ""],
-            });
-          }
+          // // Add catchment layer.
+          // if (!mapInstance.getLayer("catchment-layer")) {
+          //   // Add fill layer first
+          //   mapInstance.addLayer({
+          //     id: "catchment-layer-fill",
+          //     type: "fill",
+          //     source: "catchments",
+          //     paint: { 
+          //       "fill-color": "#CCCCCC",
+          //       "fill-opacity": 0.05
+          //     },
+          //   });
+          //   // Add line layer on top
+          //   mapInstance.addLayer({
+          //     id: "catchment-layer-line",
+          //     type: "line",
+          //     source: "catchments",
+          //     paint: { 
+          //       "line-color": "#CCCCCC",
+          //       "line-width": 1,
+          //       "line-opacity": 0.8
+          //     },
+          //   });
+          // }
+          // // Add highlighted catchments layer.
+          // if (!mapInstance.getLayer("highlighted-catchments")) {
+          //   // Add fill layer first
+          //   mapInstance.addLayer({
+          //     id: "highlighted-catchments-fill",
+          //     type: "fill",
+          //     source: "catchments",
+          //     paint: { 
+          //       "fill-color": "#137780",
+          //       "fill-opacity": 0.1
+          //     },
+          //     filter: ["in", "USE_DESC", ""],
+          //   });
+          //   // Add line layer on top
+          //   mapInstance.addLayer({
+          //     id: "highlighted-catchments-line",
+          //     type: "line",
+          //     source: "catchments",
+          //     paint: { 
+          //       "line-color": "#137780",
+          //       "line-width": 3,
+          //       "line-opacity": 1
+          //     },
+          //     filter: ["in", "USE_DESC", ""],
+          //   });
+          // }
 
           // Find the matching school feature
           const matchingFeature = data.features.find((feature: any) => {
@@ -202,142 +242,159 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
 
 
   const fetchPropertiesForSuburb = async () => {
-    // Remove existing property markers.
+    // Remove existing property markers
     propertyMarkersRef.current.forEach(marker => marker.remove());
     propertyMarkersRef.current = [];
+
     try {
-      const url = `https://zylalabs.com/api/1476/australia+realty+api/1221/get+properties+list?channel=buy&searchLocation=${encodeURIComponent(
+      // Create URLs for three pages
+      const createUrl = (page: number) => `https://zylalabs.com/api/1476/australia+realty+api/1221/get+properties+list?channel=buy&searchLocation=${encodeURIComponent(
         urlSchoolName?.suburb || ''
-      )}&searchLocationSubtext=Region&type=region`;
-      // add auth headers
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer 7008|V7LWFcAdOjDeO8OhoW3JGX688HNT094h8we3J1Wo`,
-        },
-      }
-      );
-      const data = await res.json();
-      const  arr = data.tieredResults[0].results;
-      // Assume the API returns an array of properties in data.properties.
-      if (arr && Array.isArray(arr)) {
-        arr.forEach((property: any) => {
-          // Assuming each property has longitude and latitude fields.
-          const address = property.address
-          const lng = address.location.longitude;
-          const lat = address.location.latitude;
-          const websiteLink = property.agency.website;
+      )}&searchLocationSubtext=Region&type=region&page=${page}&pageSize=30`;
 
-          
-          const image1 = property.images[0];
-          const image2 = property.images[1];
-          const image3 = property.images[2];
-          
-          const image1url = image1.server + image1.uri;
-          const image2url = image2.server + image2.uri;
-          const image3url = image3.server + image3.uri;
+      // Fetch all three pages in parallel
+      const [page1, page2, page3] = await Promise.all([
+        fetch(createUrl(1), {
+          headers: {
+            Authorization: `Bearer 7008|V7LWFcAdOjDeO8OhoW3JGX688HNT094h8we3J1Wo`,
+          },
+        }).then(res => res.json()),
+        fetch(createUrl(2), {
+          headers: {
+            Authorization: `Bearer 7008|V7LWFcAdOjDeO8OhoW3JGX688HNT094h8we3J1Wo`,
+          },
+        }).then(res => res.json()),
+        fetch(createUrl(3), {
+          headers: {
+            Authorization: `Bearer 7008|V7LWFcAdOjDeO8OhoW3JGX688HNT094h8we3J1Wo`,
+          },
+        }).then(res => res.json())
+      ]);
 
-          console.log("property", lng, lat);
+      // Combine results from all pages
+      const arr = [
+        ...page1.tieredResults[0].results,
+        ...page2.tieredResults[0].results,
+        ...page3.tieredResults[0].results
+      ];
 
-          if (lng && lat) {
-            
-            const el = document.createElement("div");
-            // Set the element style to show a home icon (adjust the URL or icon as needed).
-            // el.style.backgroundImage = 'url("home-icon.png")';
-            // el.style.background = "blue";
-            el.style.backgroundColor = 'green';
-            el.style.borderRadius = '50%'; // Make it a dot
-            // el.style.border = "2px solid white";
-            el.style.width = "24px";
-            el.style.height = "24px";
-            el.style.backgroundSize = "contain";
-            el.style.backgroundRepeat = "no-repeat";
-            el.style.cursor = "pointer";
-            // Optionally, add a title or event listener.
-            el.title = address.streetAddress || "Property";
-            el.addEventListener("click", (e) => {
-              e.stopPropagation();
-              // Remove any existing popups
-              document.querySelectorAll('.mapboxgl-popup').forEach(popup => {
-                popup.remove();
-              });
-              new mapboxgl.Popup({ closeButton: true })
-                .setLngLat([lng, lat])
-                .setHTML(`
-                  <div style="
-                    padding: 0;
-                    font-family: system-ui, -apple-system, sans-serif;
-                    width: 320px;
-                    background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 8px 16px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.08);
-                    overflow: hidden;
-                    display: flex;
-                  ">
-                    <div style="
-                      width: 40%;
-                      position: relative;
-                      background-size: cover;
-                      background-position: center;
-                      min-height: 140px;
-                      background-image: url('${image1url || image2url || image3url}');
-                    "></div>
-                    
-                    <div style="
-                      width: 60%;
-                      padding: 16px;
-                    ">
-                      <div style="
-                        font-size: 10px;
-                        color: #666;
-                        margin-bottom: 10px;
-                      ">${address.streetAddress}, ${address.suburb} ${address.state} ${address.postcode}</div>
-                      
-                      <div style="
-                        border-top: 1px solid #eee;
-                        padding-top: 8px;
-                        display: flex;
-                        align-items: center;
-                      ">
-                        <img 
-                          src="${image1url || image2url || image3url}"
-                          style="
-                            height: 30px;
-                            margin-right: 8px;
-                            object-fit: contain;
-                          "
-                          alt="${property.agency.name}"
-                        />
-                        <a 
-                          href="${websiteLink}"
-                          target="_blank"
-                          style="
-                            font-size: 10px;
-                            color: #000000;
-                            text-decoration: underline;
-                            font-weight: semibold;
-                          "
-                        >${property.agency.name || 'Real Estate Agency'}</a>
-                      </div>
-                    </div>
-                  </div>`)
-                .addTo(mapRef.current!);
-            });
-            el.addEventListener("mouseleave", () => {
-              if ((el as any).currentPopup) {
-                (el as any).currentPopup.remove();
-                (el as any).currentPopup = null;
-              }
-            });
-            console.log("address", lng, lat, address);
-            const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(mapRef.current!);
-            propertyMarkersRef.current.push(marker);
-          }
-        });
-      }
+      // Filter valid properties
+      const validProperties = arr.filter((property: any) => {
+        if (property.propertyType !== "house") return false;
+        if (!property.address?.location?.latitude || !property.address?.location?.longitude) return false;
+        if (!property.images?.[0]) return false;
+        return true;
+      });
+
+      // Update state with valid properties
+      setProperties(validProperties);
+      console.log("validProperties", validProperties);
+      console.log(`Total properties: ${arr.length}, Valid properties: ${validProperties.length}`);
+
     } catch (error) {
-      console.error("Error fetching properties for suburb:", urlSchoolName?.suburb, error);
+      console.error("Error fetching properties:", error);
+      setProperties([]);
     }
   };
+
+  // Add useEffect to handle markers when properties change
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Clear existing markers
+    propertyMarkersRef.current.forEach(marker => marker.remove());
+    propertyMarkersRef.current = [];
+
+    // Create markers for each property
+    properties.forEach((property) => {
+      const { longitude, latitude } = property.address.location;
+      const image1 = property.images[0];
+      const image1url = `${image1.server}${image1.uri}`;
+      const websiteLink = `https://www.realestate.com.au/${property.prettyUrl}`;
+      // const noOfBedrooms = property?.generalFeatures?.bedrooms?.value;
+      // const noOfBathrooms = property?.generalFeatures?.bathrooms?.value;
+      // const noOfCarSpaces = property?.generalFeatures?.carSpaces?.value;
+      const price = property?.price?.display;
+
+      const el = document.createElement("div");
+      el.style.backgroundColor = 'green';
+      el.style.borderRadius = '50%';
+      el.style.width = "24px";
+      el.style.height = "24px";
+      el.style.backgroundSize = "contain";
+      el.style.backgroundRepeat = "no-repeat";
+      el.style.cursor = "pointer";
+      el.title = property.address.streetAddress || "Property";
+
+      // Add click handler
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.mapboxgl-popup').forEach(popup => popup.remove());
+        
+        new mapboxgl.Popup({ closeButton: true })
+          .setLngLat([longitude, latitude])
+          .setHTML(`
+            <div style="
+              padding: 0;
+              font-family: system-ui, -apple-system, sans-serif;
+              width: 320px;
+              background: white;
+              border-radius: 12px;
+              box-shadow: 0 8px 16px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.08);
+              overflow: hidden;
+              display: flex;
+            ">
+              <div style="
+                width: 40%;
+                position: relative;
+                background-size: cover;
+                background-position: center;
+                min-height: 140px;
+                background-image: url('${image1url}');
+              "></div>
+              
+              <div style="
+                width: 60%;
+                padding: 12px;
+              ">
+                <div style="
+                  font-size: 12px;
+                  color: #666;
+                  font-weight: bold;
+                  margin-bottom: 10px;
+                ">${price}</div>
+                
+                <div style="
+                  border-top: 1px solid #eee;
+                  padding-top: 8px;
+                  display: flex;
+                  align-items: center;
+                ">
+                  
+                  <a 
+                    href="${websiteLink}"
+                    target="_blank"
+                    style="
+                      font-size: 12px;
+                      color: #000000;
+                      text-decoration: underline;
+                      font-weight: bold;
+                    "
+                  >${property.address.streetAddress}, ${property.address.suburb} ${property.address.state} ${property.address.postcode}</a>
+                </div>
+            </div>
+          `)
+          .addTo(mapRef.current!);
+      });
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([longitude, latitude])
+        .addTo(mapRef.current!);
+      
+      propertyMarkersRef.current.push(marker);
+    });
+
+  }, [properties]);
 
   return (
     <div className="py-4">
