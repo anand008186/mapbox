@@ -253,18 +253,8 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
       )}&searchLocationSubtext=Region&type=region&page=${page}&pageSize=30`;
 
       // Fetch all three pages in parallel
-      const [page1, page2, page3] = await Promise.all([
-        fetch(createUrl(1), {
-          headers: {
-            Authorization: `Bearer 7008|V7LWFcAdOjDeO8OhoW3JGX688HNT094h8we3J1Wo`,
-          },
-        }).then(res => res.json()),
+      const [ page2] = await Promise.all([
         fetch(createUrl(2), {
-          headers: {
-            Authorization: `Bearer 7008|V7LWFcAdOjDeO8OhoW3JGX688HNT094h8we3J1Wo`,
-          },
-        }).then(res => res.json()),
-        fetch(createUrl(3), {
           headers: {
             Authorization: `Bearer 7008|V7LWFcAdOjDeO8OhoW3JGX688HNT094h8we3J1Wo`,
           },
@@ -273,9 +263,7 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
 
       // Combine results from all pages
       const arr = [
-        ...page1.tieredResults[0].results,
         ...page2.tieredResults[0].results,
-        ...page3.tieredResults[0].results
       ];
 
       // Filter valid properties

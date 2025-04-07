@@ -405,7 +405,7 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
       alert("Map is not initialized yet.");
       return;
     }
-    const { lng: originLng, lat: originLat } = map.getCenter();
+    const { lng: originLng, lat: originLat } = {lng:selectedSchool?.coordinates[0], lat:selectedSchool?.coordinates[1]};
     try {
       const directionsResponse = await fetch(
         `https://api.mapbox.com/directions/v5/mapbox/driving/${originLng},${originLat};${destLng},${destLat}?geometries=geojson&access_token=${mapboxgl.accessToken}`
