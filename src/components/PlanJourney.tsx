@@ -74,7 +74,7 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
   const [selectedSchool, setSelectedSchool] = useState<SelectedSchool | null>(null);
   const [mapStyle, _setMapStyle] = useState<string>("mapbox://styles/mapbox/streets-v12");
 //   const [urlSchoolName, setUrlSchoolName] = useState<{name: string, suburb: string} | null>(null);
-
+const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store the existing marker
   // Ref to store fetched catchments GeoJSON.
   const catchmentsRef = useRef<any>(null);
   // Ref to store POI markers so we can remove them when needed.
@@ -305,38 +305,41 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
             el.style.backgroundRepeat = "no-repeat";
             el.style.cursor = "pointer";
 
-            // // Create and show popup by default for school marker
-            // const schoolPopup = new mapboxgl.Popup({
-            //   closeButton: true,
-            //   closeOnClick: false, // Prevent closing when clicking outside
-            //   offset: [0, -15],
-            //   className: 'custom-popup'
-            // })
-            //   .setLngLat(coordinates)
-            //   .setHTML(`
-            //     <div style="
-            //       padding: 12px 16px 8px 8px;
-            //       font-family: system-ui, -apple-system, sans-serif;
-            //     ">
-            //       <div style="
-            //         font-size: 14px;
-            //         font-weight: semibold;
-            //         color: #000000;
-            //       ">${schoolName}</div>
-            //     </div>
-            //   `)
-            //   .addTo(mapInstance);
+            // Create and show popup by default for school marker
+            const schoolPopup = new mapboxgl.Popup({
+              closeButton: true,
+              closeOnClick: false, // Prevent closing when clicking outside
+              offset: [0, -25],
+              className: 'custom-popup'
+            })
+              .setLngLat(coordinates)
+              .setHTML(`
+                <div style="
+                 padding: 8px 20px 8px 8px;
+                  font-family: system-ui, -apple-system, sans-serif;
+                  border-radius: 5px;
+                ">
+                  <div style="
+                    font-size: 14px;
+                    font-weight: semibold;
+                    color: #000000;
+                  ">${schoolName}</div>
+                </div>
+              `)
+              .addTo(mapInstance);
             
-            // el.addEventListener("click", (e) => {
-            //   e.stopPropagation();
-            //   schoolPopup.setLngLat(coordinates).addTo(mapInstance);
-            // });
+            el.addEventListener("click", (e) => {
+              e.stopPropagation();
+              schoolPopup.setLngLat(coordinates).addTo(mapInstance);
+            });
 
             // // Add marker to map
             new mapboxgl.Marker(el).setLngLat(coordinates).addTo(mapInstance);
 
+            
+          console.log("urlSchoolName", urlSchoolName);
             // Set selected school and highlight catchment
-            setSelectedSchool({ name: schoolName, coordinates, suburb });
+            setSelectedSchool({ name: urlSchoolName?.name.replace(/_/g, " ").replace( 'ps','public school').toLocaleUpperCase() || schoolName, coordinates, suburb });
             mapInstance.setFilter("highlighted-catchments-fill", ["==", "USE_DESC", schoolName]);
             mapInstance.setFilter("highlighted-catchments-line", ["==", "USE_DESC", schoolName]);
 
@@ -435,6 +438,29 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
       route.geometry.coordinates.forEach((coord: number[]) => {
         bounds.extend(coord as [number, number]);
       });
+      // Remove existing destination markers from the map
+
+      if (existingMarkerRef.current) {
+        existingMarkerRef.current.remove();
+        existingMarkerRef.current = null;
+      }
+
+      const startPoint = route.geometry.coordinates[route.geometry.coordinates.length - 1]; // Get the destination coordinates
+
+      // Create a small font text element
+      const labelEl = document.createElement("div");
+      labelEl.textContent = selectedDestination.place_name; // Use the place name from the selected destination
+      labelEl.style.fontWeight = "bold"; // Make the text bold
+      labelEl.style.color = "black"; // Set the text color
+      labelEl.style.backgroundColor = "white"; // Optional: background color for better visibility
+      labelEl.style.padding = "2px 5px"; // Optional: padding for the label
+      labelEl.style.fontSize = "12px"; // Set the font size to small
+      labelEl.style.position = "absolute"; // Position it absolutely
+      labelEl.style.transform = "translate(-50%, -150%)"; // Center the text above the point
+      const labelMarker = new mapboxgl.Marker(labelEl) // Create a marker for the label
+          .setLngLat(startPoint) // Set the position to the same as the black dot marker
+          .addTo(map); // Add the label marker to the map
+      existingMarkerRef.current = labelMarker;
       map.fitBounds(bounds, { padding: 50 });
     } catch (error) {
       alert("An error occurred while calculating the route. Please try again.");

@@ -164,32 +164,34 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
             el.style.backgroundRepeat = "no-repeat";
             el.style.cursor = "pointer";
 
-            // // Create and show popup by default for school marker
-            // const schoolPopup = new mapboxgl.Popup({
-            //   closeButton: true,
-            //   closeOnClick: false, // Prevent closing when clicking outside
-            //   offset: [0, -15],
-            //   className: 'custom-popup'
-            // })
-            //   .setLngLat(coordinates)
-            //   .setHTML(`
-            //     <div style="
-            //       padding: 12px 16px 8px 8px;
-            //       font-family: system-ui, -apple-system, sans-serif;
-            //     ">
-            //       <div style="
-            //         font-size: 14px;
-            //         font-weight: semibold;
-            //         color: #000000;
-            //       ">${schoolName}</div>
-            //     </div>
-            //   `)
-            //   .addTo(mapInstance);
+            // Create and show popup by default for school marker
+            const schoolPopup = new mapboxgl.Popup({
+              closeButton: true,
+              closeOnClick: false, // Prevent closing when clicking outside
+              offset: [10, -25],
+              className: 'custom-popup'
+            })
+              .setLngLat(coordinates)
+              .setHTML(`
+                <div style="
+                  padding: 8px 20px 8px 8px;
+                  font-family: system-ui, -apple-system, sans-serif;
+                  border-radius: 5px;
+                ">
+                  <div style="
+                    font-size: 14px;
+                    font-weight: semibold;
+                    color: #000000;
+                  ">${schoolName}</div>
+                </div>
+              `)
+              .addTo(mapInstance);
             
-            // el.addEventListener("click", (e) => {
-            //   e.stopPropagation();
-            //   schoolPopup.setLngLat(coordinates).addTo(mapInstance);
-            // });
+            el.addEventListener("click", (e) => {
+              e.stopPropagation();
+              document.querySelectorAll('.mapboxgl-popup').forEach(popup => popup.remove());
+              schoolPopup.setLngLat(coordinates).addTo(mapInstance);
+            });
 
             // // Add marker to map
             new mapboxgl.Marker(el).setLngLat(coordinates).addTo(mapInstance);
