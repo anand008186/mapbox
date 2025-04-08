@@ -59,7 +59,7 @@ interface SelectedSchool {
 // }
 
 interface PlanJourneyProps {
-    urlSchoolName: {name: string, suburb: string} | null;
+    urlSchoolName: {name: string, suburb: string, lat: string, lng: string} | null;
 }
 
 const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
@@ -77,34 +77,13 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
 const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store the existing marker
   // Ref to store fetched catchments GeoJSON.
   const catchmentsRef = useRef<any>(null);
+
+  console.log("urlSchoolName", urlSchoolName);
   // Ref to store POI markers so we can remove them when needed.
   // const poiMarkersRef = useRef<mapboxgl.Marker[]>([]);
   // New ref: property markers (home icons)
 //   const propertyMarkersRef = useRef<mapboxgl.Marker[]>([]);
 
-  // Remove isFullscreen state and related code
-  // const [isFullscreen, setIsFullscreen] = useState(false);
-
-  // Remove iframe-specific useEffect
-  useEffect(() => {
-    // Check if running in iframe
-    const isInIframe = window !== window.parent;
-    
-    if (isInIframe) {
-      // Adjust styles for iframe context
-      document.body.style.margin = '0';
-      document.body.style.padding = '0';
-      document.body.style.overflow = 'hidden';
-    }
-    
-    return () => {
-      if (isInIframe) {
-        document.body.style.margin = '';
-        document.body.style.padding = '';
-        document.body.style.overflow = '';
-      }
-    };
-  }, []);
 
   // Separate the URL parameter handling and fullscreen detection into two different effects
 //   useEffect(() => {
@@ -309,7 +288,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
             const schoolPopup = new mapboxgl.Popup({
               closeButton: true,
               closeOnClick: false, // Prevent closing when clicking outside
-              offset: [0, -25],
+              offset: [20, -25],
               className: 'custom-popup'
             })
               .setLngLat(coordinates)
@@ -331,6 +310,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
             el.addEventListener("click", (e) => {
               e.stopPropagation();
               schoolPopup.setLngLat(coordinates).addTo(mapInstance);
+
             });
 
             // // Add marker to map
@@ -360,6 +340,55 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
             // if (suburb) {
             //   fetchPropertiesForSuburb();
             // }
+          }else{
+
+            //create marker for the school
+            const el = document.createElement("div");
+            el.className = "school-marker";
+            el.style.width = "30px";
+            el.style.height = "30px";
+            el.style.backgroundImage = 'url("map-pin.png")';
+            el.style.backgroundSize = "contain";
+            // el.style.zIndex = "1000";
+            el.style.backgroundRepeat = "no-repeat";
+            el.style.cursor = "pointer";
+
+            //create and show popup by default for school marker
+            const schoolPopup = new mapboxgl.Popup({
+              closeButton: true,
+              closeOnClick: false, // Prevent closing when clicking outside
+              offset: [20, -25],
+              className: 'custom-popup'
+            })
+              .setLngLat([parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')])
+              .setHTML(`
+                <div style="
+                  padding: 8px 20px 8px 8px;
+                  font-family: system-ui, -apple-system, sans-serif;
+                  border-radius: 5px;
+                ">
+                  <div style="
+                    font-size: 14px;
+                    font-weight: semibold;
+                    color: #000000;
+                  ">${urlSchoolName?.name}</div>
+                </div>
+              `)
+              .addTo(mapInstance);
+            
+            el.addEventListener("click", (e) => {
+              e.stopPropagation();
+              schoolPopup.setLngLat([parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')]).addTo(mapInstance);
+            });
+
+            new mapboxgl.Marker(el).setLngLat([parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')]).addTo(mapInstance);
+ 
+            setSelectedSchool({ name: urlSchoolName?.name.replace(/_/g, " ").replace( 'ps','public school').toLocaleUpperCase() || '', coordinates: [parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')], suburb: urlSchoolName?.suburb || '' });
+
+            mapInstance.flyTo({center: [parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')], zoom: 12, speed: 0.5 }); // Smoothly transition to the specified zoom level
+            mapInstance.setCenter([parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')]);
+
+            console.log("No matching feature found");
           }
         });
 
@@ -488,6 +517,8 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
         });
       }
       mapRef.current.fitBounds(bounds, { padding: 50 });
+    }else{
+      mapRef.current.flyTo({center: [parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')], zoom: 12, speed: 0.5 }); // Smoothly transition to the specified zoom level
     }
   };
 
@@ -568,7 +599,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full text-xs justify-start h-auto py-2 overflow-hidden relative",
+                          "w-full text-xs flex justify-start h-auto py-2  relative",
                           {
                             "border-2 border-blue-500": selectedDestination?.id === result.id,
                           }

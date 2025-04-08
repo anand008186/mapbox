@@ -168,7 +168,7 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
             const schoolPopup = new mapboxgl.Popup({
               closeButton: true,
               closeOnClick: false, // Prevent closing when clicking outside
-              offset: [10, -25],
+              offset: [20, -25],
               className: 'custom-popup'
             })
               .setLngLat(coordinates)
@@ -218,6 +218,62 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
             if (suburb) {
               fetchPropertiesForSuburb();
             }
+          }else {
+            //create marker for the school
+            const el = document.createElement("div");
+            el.className = "school-marker";
+            el.style.width = "30px";
+            el.style.height = "30px";
+            el.style.backgroundImage = 'url("map-pin.png")';
+            el.style.backgroundSize = "contain";  
+            el.style.backgroundRepeat = "no-repeat";
+            el.style.cursor = "pointer";
+
+            new mapboxgl.Marker(el).setLngLat([parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')]).addTo(mapInstance);
+
+             const schoolPopup = new mapboxgl.Popup({
+              closeButton: true,
+              closeOnClick: false, // Prevent closing when clicking outside
+              offset: [20, -25],
+              className: 'custom-popup'
+            })  
+            .setLngLat([parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')])
+            .setHTML(`
+              <div style="
+                padding: 8px 20px 8px 8px;
+                font-family: system-ui, -apple-system, sans-serif;
+                border-radius: 5px;
+              ">
+                <div style="
+                  font-size: 14px;
+                  font-weight: semibold;
+                  color: #000000; 
+                ">${urlSchoolName?.name}</div>
+              </div>
+            `)
+            .addTo(mapInstance);
+
+            el.addEventListener("click", (e) => { 
+              e.stopPropagation();
+              document.querySelectorAll('.mapboxgl-popup').forEach(popup => popup.remove());
+              schoolPopup.setLngLat([parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')]).addTo(mapInstance);
+            });
+
+            //Zoom to the latitude and longitude of the school
+            mapInstance.flyTo({center: [parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')], zoom: 10, speed: 0.7 }); // Smoothly transition to the specified zoom level
+
+            setTimeout(() => {
+              if (mapInstance) {
+                mapInstance.resize();
+              }
+            }, 100); // 100ms delay, can be adjusted if needed
+
+            //Fetch properties for the suburb
+            
+          // if(urlSchoolName?.suburb){
+          //   console.log("suburb", urlSchoolName);
+          //   fetchPropertiesForSuburb();
+          // }
           }
         });
 
