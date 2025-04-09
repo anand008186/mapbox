@@ -181,8 +181,10 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
                   <div style="
                     font-size: 14px;
                     font-weight: semibold;
+                    max-width: 180px;
+                    text-transform: capitalize;
                     color: #000000;
-                  ">${schoolName}</div>
+                  ">${schoolName.replace(/_/g, ' ').replace(/-/g, ' ')}</div>
                 </div>
               `)
               .addTo(mapInstance);
@@ -247,8 +249,10 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
                 <div style="
                   font-size: 14px;
                   font-weight: semibold;
+                  max-width: 180px;
+                  text-transform: capitalize;
                   color: #000000; 
-                ">${urlSchoolName?.name}</div>
+                ">${urlSchoolName?.name.replace(/_/g, ' ').replace(/-/g, ' ')}</div>
               </div>
             `)
             .addTo(mapInstance);
@@ -262,18 +266,18 @@ export const NearbyHouses: React.FC<NearbyHousesProps> = ({  urlSchoolName }) =>
             //Zoom to the latitude and longitude of the school
             mapInstance.flyTo({center: [parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')], zoom: 10, speed: 0.7 }); // Smoothly transition to the specified zoom level
 
-            setTimeout(() => {
-              if (mapInstance) {
-                mapInstance.resize();
-              }
-            }, 100); // 100ms delay, can be adjusted if needed
+            // setTimeout(() => {
+            //   if (mapInstance) {
+            //     mapInstance.resize();
+            //   }
+            // }, 100); // 100ms delay, can be adjusted if needed
 
             //Fetch properties for the suburb
             
-          // if(urlSchoolName?.suburb){
-          //   console.log("suburb", urlSchoolName);
-          //   fetchPropertiesForSuburb();
-          // }
+          if(urlSchoolName?.suburb){
+            console.log("suburb", urlSchoolName);
+            fetchPropertiesForSuburb();
+          }
           }
         });
 

@@ -301,8 +301,10 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                   <div style="
                     font-size: 14px;
                     font-weight: semibold;
+                    max-width: 180px;
+                    text-transform: capitalize;
                     color: #000000;
-                  ">${schoolName}</div>
+                  ">${schoolName.replace(/_/g, ' ').replace(/-/g, ' ')}</div>
                 </div>
               `)
               .addTo(mapInstance);
@@ -370,8 +372,10 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                   <div style="
                     font-size: 14px;
                     font-weight: semibold;
+                    max-width: 180px;
+                    text-transform: capitalize;
                     color: #000000;
-                  ">${urlSchoolName?.name}</div>
+                  ">${urlSchoolName?.name.replace(/_/g, ' ').replace(/-/g, ' ')}</div>
                 </div>
               `)
               .addTo(mapInstance);
@@ -567,8 +571,8 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
               className="absolute inset-0 w-full h-full rounded-lg overflow-hidden border border-gray-200"
             />
           </div>
-          <div className="space-y-6  max-h-[500px] overflow-y-auto hide-scrollbar">
-            <div className="flex flex-col gap-2">
+          <div className="space-y-6  max-h-[500px] w-full overflow-x-hidden overflow-y-auto hide-scrollbar">
+            <div className="w-full flex  flex-col gap-2">
               <div className="relative flex-1">
                 <Input
                   type="text"
@@ -578,7 +582,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                   className="pl-3"
                 />
               </div>
-              <div className="relative flex-1">
+              <div className=" relative flex-1">
                 <Input
                   type="text"
                   placeholder="Enter destination address"
@@ -592,14 +596,14 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
               </div>
             </div>
             {searchResults.length > 0 && (
-              <div className="mt-4">
-                <ul className="space-y-2">
+              <div className="mt-4 ">
+                <ul className="space-y-2 1">
                   {searchResults.map((result, index) => (
-                    <li key={index}>
+                    <li key={index} className="relative flex-1">
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full text-xs flex justify-start h-auto py-2  relative",
+                          "w-full text-xs flex justify-start overflow-auto hide-scrollbar h-auto py-2  relative",
                           {
                             "border-2 border-blue-500": selectedDestination?.id === result.id,
                           }
