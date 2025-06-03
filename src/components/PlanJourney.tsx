@@ -552,11 +552,11 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
   }, [selectedDestination]);
 
   return (
-    <div className="h-screen bg-background py-4">
+    <div className="h-screen bg-background">
       <div className="mx-auto max-w-5xl ">
         <div className="mb-8  rounded-xl">
           <div className="m-2">
-            <h1 className="text-lg font-bold tracking-tight md:text-3xl">
+            <h1 className="text-[20px] font-[600] tracking-tight md:text-3xl">
               Plan School Journey
             </h1>
             <p className="mt-3 text-sm text-muted-foreground">
