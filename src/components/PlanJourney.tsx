@@ -78,7 +78,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
   // Ref to store fetched catchments GeoJSON.
   const catchmentsRef = useRef<any>(null);
 
-  console.log("urlSchoolName", urlSchoolName);
+  //console.log("urlSchoolName", urlSchoolName);
   // Ref to store POI markers so we can remove them when needed.
   // const poiMarkersRef = useRef<mapboxgl.Marker[]>([]);
   // New ref: property markers (home icons)
@@ -319,7 +319,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
             new mapboxgl.Marker(el).setLngLat(coordinates).addTo(mapInstance);
 
             
-          console.log("urlSchoolName", urlSchoolName);
+        //  console.log("urlSchoolName", urlSchoolName);
             // Set selected school and highlight catchment
             setSelectedSchool({ name: urlSchoolName?.name.replace(/_/g, " ").replace( 'ps','public school').toLocaleUpperCase() || schoolName, coordinates, suburb });
             mapInstance.setFilter("highlighted-catchments-fill", ["==", "USE_DESC", schoolName]);
@@ -392,7 +392,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
             mapInstance.flyTo({center: [parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')], zoom: 12, speed: 0.5 }); // Smoothly transition to the specified zoom level
             mapInstance.setCenter([parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')]);
 
-            console.log("No matching feature found");
+          //  console.log("No matching feature found");
           }
         });
 
@@ -577,7 +577,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                 <Input
                   type="text"
                   placeholder="Enter a school address"
-                  value={selectedSchool?.name}
+                  value={selectedSchool?.name || ""}
                   readOnly
                   className="pl-3"
                 />

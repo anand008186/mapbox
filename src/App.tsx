@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { cn } from './lib/utils';
+//import { cn } from './lib/utils';
 import PlanJourney from './components/PlanJourney';
-import { NearbyHouses } from './components/NearbyHouses';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'journey' | 'houses'>('journey');
+  //const [activeTab, setActiveTab] = useState<'journey' | 'houses'>('journey');
   // Keep the shared state here (selectedSchool, urlSchoolName)
   const [urlSchoolName, setUrlSchoolName] = useState<{name: string, suburb: string, lat: string, lng: string} | null>(null);
 
@@ -67,7 +66,6 @@ document.head.appendChild(styleSheet);
           lat: latParam || '-33.620111',
           lng: lngParam || '150.8504'
         });
-        console.log("urlSchoolName1", urlSchoolName);
       } 
       
     } catch (error) {
@@ -84,46 +82,10 @@ document.head.appendChild(styleSheet);
   return (
     <div className="h-screen bg-background p-2">
       <div className="mx-auto max-w-5xl">
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('journey')}
-              className={cn(
-                ' border-b-2 font-medium text-sm',
-                activeTab === 'journey' 
-                  ? 'border-[#137780]  '
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              )}
-            >
-              Plan School Journey
-            </button>
-            <button
-              onClick={() => setActiveTab('houses')}
-              className={cn(
-                'py-2 px-1 border-b-2 font-medium text-sm',
-                activeTab === 'houses'
-                  ? 'border-[#137780] '
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              )}
-            >
-              Nearby Houses
-            </button>
-          </nav>
-        </div>
 
-        {/* Content */}
-        <div className="mt-2">
-          {activeTab === 'journey' ? (
-            <PlanJourney
+        <PlanJourney
                urlSchoolName={urlSchoolName}
             />
-          ) : (
-            <NearbyHouses
-              urlSchoolName={urlSchoolName}
-            />
-          )}
-        </div>
       </div>
     </div>
   );
