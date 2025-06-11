@@ -555,14 +555,14 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
     <div className="h-screen bg-background">
       <div className="mx-auto max-w-5xl ">
         <div className="mb-8  rounded-xl">
-          <div className="m-2">
+          {/* <div className="m-2">
             <h1 className="text-[20px] font-[600] tracking-tight md:text-3xl">
               Plan School Journey
             </h1>
             <p className="mt-3 text-sm text-muted-foreground">
               Find out the travel time from this school to your important destinations including work, home, train stations, shops, and beaches.
             </p>
-          </div>
+          </div> */}
         </div>
         <div className="grid grid-cols-1 min-[575px]:grid-cols-2 gap-6 px-4">
           <div className="relative w-full" style={{ aspectRatio: '1/1' }}>
