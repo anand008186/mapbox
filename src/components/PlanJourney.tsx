@@ -565,7 +565,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
           </div> */}
         </div>
         <div className="grid grid-cols-1 gap-6 px-4">
-          <div className="relative w-full h-[500px] " style={{ aspectRatio: '1/1' }}>
+          <div className="relative w-full h-[300px] " style={{ aspectRatio: '1/1' }}>
             <div
               ref={mapContainerRef}
               className="absolute inset-0 w-full h-full rounded-lg overflow-hidden border border-gray-200"
