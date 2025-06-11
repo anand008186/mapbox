@@ -554,7 +554,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
   return (
     <div className="h-screen bg-background">
       <div className="mx-auto max-w-5xl ">
-        <div className="mb-8  rounded-xl">
+        <div className=" rounded-xl">
           {/* <div className="m-2">
             <h1 className="text-[20px] font-[600] tracking-tight md:text-3xl">
               Plan School Journey
