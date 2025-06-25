@@ -286,8 +286,6 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
 
             // Create and show popup by default for school marker
             const schoolPopup = new mapboxgl.Popup({
-              closeButton: true,
-              closeOnClick: false, // Prevent closing when clicking outside
               offset: [20, -25],
               className: 'custom-popup'
             })
@@ -307,7 +305,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                   ">${schoolName.replace(/_/g, ' ').replace(/-/g, ' ')}</div>
                 </div>
               `)
-              .addTo(mapInstance);
+              // .addTo(mapInstance);
             
             el.addEventListener("click", (e) => {
               e.stopPropagation();
@@ -357,8 +355,6 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
 
             //create and show popup by default for school marker
             const schoolPopup = new mapboxgl.Popup({
-              closeButton: true,
-              closeOnClick: false, // Prevent closing when clicking outside
               offset: [20, -25],
               className: 'custom-popup'
             })
@@ -378,7 +374,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                   ">${urlSchoolName?.name.replace(/_/g, ' ').replace(/-/g, ' ')}</div>
                 </div>
               `)
-              .addTo(mapInstance);
+              // .addTo(mapInstance);
             
             el.addEventListener("click", (e) => {
               e.stopPropagation();
