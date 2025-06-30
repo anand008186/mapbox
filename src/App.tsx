@@ -5,7 +5,14 @@ import PlanJourney from './components/PlanJourney';
 const App: React.FC = () => {
   //const [activeTab, setActiveTab] = useState<'journey' | 'houses'>('journey');
   // Keep the shared state here (selectedSchool, urlSchoolName)
-  const [urlSchoolName, setUrlSchoolName] = useState<{name: string, suburb: string, lat: string, lng: string} | null>(null);
+  const [urlSchoolName, setUrlSchoolName] = useState<{name: string, suburb: string, lat: string, lng: string, postcode: string, state: string}>({
+    name: '',
+    suburb: '',
+    lat: '',
+    lng: '',
+    postcode: '',
+    state: ''
+  });
 
   // Add custom styles for popups
 const popupStyles = `
@@ -53,18 +60,21 @@ document.head.appendChild(styleSheet);
       const suburbParam = urlParams.get('suburb');
       const latParam = urlParams.get('latitude');
       const lngParam = urlParams.get('longitude');
+      const postcodeParam = urlParams.get('postcode');
+      const stateParam = urlParams.get('state');
 
       if (schoolParam && latParam && lngParam) {
         const formattedSchoolName = schoolParam
           .toLowerCase()
-          .replace('public-school', 'ps')
           .replace(/-/g, '_');
 
         setUrlSchoolName({
-          name: formattedSchoolName || 'oakville_ps',
+          name: formattedSchoolName || 'oakville_public_school',
           suburb: suburbParam || '2765',
           lat: latParam || '-33.620111',
-          lng: lngParam || '150.8504'
+          lng: lngParam || '150.8504',
+          postcode: postcodeParam || '2765',
+          state: stateParam || 'nsw'
         });
       } 
       
@@ -74,7 +84,9 @@ document.head.appendChild(styleSheet);
         name: 'oakville_ps',
         suburb: '2765',
         lat: '-33.620111',
-        lng: '150.8504'
+        lng: '150.8504',
+        postcode: '2765',
+        state: 'nsw'
       });
     }
   }, []); // Empty dependency array as this should only run once on mount

@@ -59,7 +59,7 @@ interface SelectedSchool {
 // }
 
 interface PlanJourneyProps {
-    urlSchoolName: {name: string, suburb: string, lat: string, lng: string} | null;
+    urlSchoolName: {name: string, suburb: string, lat: string, lng: string, postcode: string, state: string} ;
 }
 
 const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
@@ -183,6 +183,48 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
   //   });
   // };
 
+  // Function to get the appropriate geojson file based on state
+  const getGeojsonFileForState = (state: string): string => {
+    const stateFileMap: { [key: string]: string } = {
+      'qld': '/geojson/qld.geojson',
+      'queensland': '/geojson/qld.geojson',
+      'sa': '/geojson/sa.geojson',
+      'south_australia': '/geojson/sa.geojson',
+      'tas': '/geojson/tas.geojson',
+      'tasmania': '/geojson/tas.geojson',
+      'vic': '/geojson/vic.geojson',
+      'victoria': '/geojson/vic.geojson',
+      'nsw': '/geojson/catchments_primary_fixed.geojson',
+      'new_south_wales': '/geojson/catchments_primary_fixed.geojson'
+    };
+    
+    return stateFileMap[state.toLowerCase()] || '/geojson/catchments_primary_fixed.geojson';
+  };
+
+  // Reusable function to find matching school feature
+  const findMatchingSchoolFeature = (features: any[], urlSchoolData: any) => {
+    return features.find((feature: any) => {
+      const schoolName = feature.properties?.School_Name?.replace(/\s+/g, '_').toLowerCase() || '';
+      const nameMatches = schoolName === urlSchoolData?.name;
+      
+      // For NSW, match by name and suburb
+      if (urlSchoolData?.state?.toLowerCase() === 'nsw') {
+        const featureSuburb = '2765'; // You can change this back to feature.properties?.USE_ID || '' when ready
+        const urlSuburb = '2765'; // You can change this back to urlSchoolData?.suburb || '' when ready
+        const suburbMatches = featureSuburb === urlSuburb;
+        
+        return nameMatches && suburbMatches;
+      } else {
+        // For QLD and other states, match by name and postcode
+        const featurePostcode = feature.properties?.PostalCode || '';
+        const urlPostcode = urlSchoolData?.postcode || '';
+        const postcodeMatches = featurePostcode === urlPostcode;
+        
+        return nameMatches && postcodeMatches;
+      }
+    });
+  };
+
   useEffect(() => {
     const mapInstance = new mapboxgl.Map({
       container: mapContainerRef.current!,
@@ -203,8 +245,11 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
     // mapInstance.addControl(navigationControl, 'bottom-right');
 
     mapInstance.on("load", () => {
+      // Get the appropriate geojson file based on state
+      const geojsonFile = getGeojsonFileForState(urlSchoolName?.state );
+      
       // Fetch catchments GeoJSON.
-      fetch("/geojson/catchments_primary_fixed.geojson")
+      fetch(geojsonFile)
         .then((response) => response.json())
         .then((data) => {
           catchmentsRef.current = data;
@@ -237,7 +282,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
             });
           }
           // Add highlighted catchments layer.
-          if (!mapInstance.getLayer("highlighted-catchments")) {
+          if (!mapInstance.getLayer("highlighted-catchments-fill")) {
             // Add fill layer first
             mapInstance.addLayer({
               id: "highlighted-catchments-fill",
@@ -245,10 +290,13 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
               source: "catchments",
               paint: { 
                 "fill-color": "#137780",
-                "fill-opacity": 0.1
+                "fill-opacity": 0.3
               },
-              filter: ["in", "USE_DESC", ""],
+              filter: ["==", "School_Name", ""], // Start with empty filter
             });
+          }
+          
+          if (!mapInstance.getLayer("highlighted-catchments-line")) {
             // Add line layer on top
             mapInstance.addLayer({
               id: "highlighted-catchments-line",
@@ -259,20 +307,17 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                 "line-width": 3,
                 "line-opacity": 1
               },
-              filter: ["in", "USE_DESC", ""],
+              filter: ["==", "School_Name", ""], // Start with empty filter
             });
           }
-
-          // Find the matching school feature
-          const matchingFeature = data.features.find((feature: any) => {
-            const schoolName = feature.properties?.USE_DESC.replace(/\s+/g, '_').toLowerCase();
-            return schoolName === urlSchoolName?.name;
-          });
+ 
+          // Find the matching school feature using reusable function
+          const matchingFeature = findMatchingSchoolFeature(data.features, urlSchoolName);
           if (matchingFeature) {
             const centroid = turf.centroid(matchingFeature);
             const coordinates = (centroid.geometry as Point).coordinates as [number, number];
-            const schoolName = matchingFeature.properties?.USE_DESC;
-            const suburb = urlSchoolName?.suburb || matchingFeature.properties?.suburb || schoolName.split(" PS")[0];
+            const schoolName = matchingFeature.properties?.School_Name;
+            const suburb = urlSchoolName?.suburb || matchingFeature.properties?.PostalCode ;
 
             // Create marker for the selected school
             const el = document.createElement("div");
@@ -319,9 +364,18 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
             
         //  console.log("urlSchoolName", urlSchoolName);
             // Set selected school and highlight catchment
-            setSelectedSchool({ name: urlSchoolName?.name.replace(/_/g, " ").replace( 'ps','public school').toLocaleUpperCase() || schoolName, coordinates, suburb });
-            mapInstance.setFilter("highlighted-catchments-fill", ["==", "USE_DESC", schoolName]);
-            mapInstance.setFilter("highlighted-catchments-line", ["==", "USE_DESC", schoolName]);
+            setSelectedSchool({ name: urlSchoolName?.name.replace(/_/g, " ").toLocaleUpperCase() || schoolName, coordinates, suburb });
+            
+            // Apply filters to highlight the catchment
+            setTimeout(() => {
+              if (mapInstance.getLayer("highlighted-catchments-fill")) {
+                mapInstance.setFilter("highlighted-catchments-fill", ["==", "School_Name", schoolName]);
+              }
+              
+              if (mapInstance.getLayer("highlighted-catchments-line")) {
+                mapInstance.setFilter("highlighted-catchments-line", ["==", "School_Name", schoolName]);
+              }
+            }, 100);
 
             // Zoom to the catchment
             const bounds = new mapboxgl.LngLatBounds();
@@ -387,8 +441,6 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
 
             mapInstance.flyTo({center: [parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')], zoom: 12, speed: 0.5 }); // Smoothly transition to the specified zoom level
             mapInstance.setCenter([parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')]);
-
-          //  console.log("No matching feature found");
           }
         });
 
@@ -500,10 +552,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
   const focusOnCatchment = () => {
     if (!mapRef.current || !catchmentsRef.current) return;
 
-    const matchingFeature = catchmentsRef.current.features.find((feature: any) => {
-      const schoolName = feature.properties?.USE_DESC.replace(/\s+/g, '_').toLowerCase();
-      return schoolName === urlSchoolName?.name;
-    });
+    const matchingFeature = findMatchingSchoolFeature(catchmentsRef.current.features, urlSchoolName);
 
     if (matchingFeature) {
       const bounds = new mapboxgl.LngLatBounds();
