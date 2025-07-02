@@ -77,6 +77,7 @@ const PlanJourney: React.FC<PlanJourneyProps> = ({urlSchoolName}) => {
 const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store the existing marker
   // Ref to store fetched catchments GeoJSON.
   const catchmentsRef = useRef<any>(null);
+  const [loading, setLoading] = useState(true); // Loader state
 
   //console.log("urlSchoolName", urlSchoolName);
   // Ref to store POI markers so we can remove them when needed.
@@ -245,10 +246,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
     // mapInstance.addControl(navigationControl, 'bottom-right');
 
     mapInstance.on("load", () => {
-      // Get the appropriate geojson file based on state
-      const geojsonFile = getGeojsonFileForState(urlSchoolName?.state );
-      
-      // Fetch catchments GeoJSON.
+      const geojsonFile = getGeojsonFileForState(urlSchoolName?.state || 'nsw');
       fetch(geojsonFile)
         .then((response) => response.json())
         .then((data) => {
@@ -375,7 +373,8 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
               if (mapInstance.getLayer("highlighted-catchments-line")) {
                 mapInstance.setFilter("highlighted-catchments-line", ["==", "School_Name", schoolName]);
               }
-            }, 100);
+              setLoading(false); // Hide loader after catchment is shown
+            }, 50); // Reduce timeout for faster display
 
             // Zoom to the catchment
             const bounds = new mapboxgl.LngLatBounds();
@@ -441,6 +440,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
 
             mapInstance.flyTo({center: [parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')], zoom: 12, speed: 0.5 }); // Smoothly transition to the specified zoom level
             mapInstance.setCenter([parseFloat(urlSchoolName?.lng || '0'), parseFloat(urlSchoolName?.lat || '0')]);
+            setLoading(false); // Hide loader even if no catchment found
           }
         });
 
@@ -473,7 +473,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
       return;
     }
     const response = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(destinationQuery)}.json?access_token=${mapboxgl.accessToken}`
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(destinationQuery)}.json?country=AU&access_token=${mapboxgl.accessToken}`
     );
     const data = await response.json();
     setSearchResults(data.features.slice(0, 3));
@@ -615,6 +615,13 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
               ref={mapContainerRef}
               className="absolute inset-0 w-full h-full rounded-lg overflow-hidden border border-gray-200"
             />
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60">
+                <svg className="animate-spin" width="48" height="48" viewBox="0 0 48 48">
+                  <circle cx="24" cy="24" r="20" fill="none" stroke="#137780" strokeWidth="6" strokeDasharray="31.4 31.4" strokeLinecap="round"/>
+                </svg>
+              </div>
+            )}
           </div>
           <div className="space-y-6  max-h-[500px] w-full overflow-x-hidden overflow-y-auto hide-scrollbar">
             <div className="w-full flex  flex-col gap-2">
