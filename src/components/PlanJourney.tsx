@@ -580,8 +580,8 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
 
   // Add this useEffect to watch for destination changes
   useEffect(() => {
-    if (!selectedDestination && mapRef.current) {
-      // Clear the route from the map
+    if ( mapRef.current) {
+      // Clea the route frorm the map
       const routeSource = mapRef.current.getSource("route") as mapboxgl.GeoJSONSource;
       if (routeSource) {
         routeSource.setData({
@@ -633,7 +633,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                   placeholder="Enter a school address"
                   value={selectedSchool?.name || ""}
                   readOnly
-                  className="pl-3"
+                  className="pl-3 text-sm"
                 />
               </div>
               <div className=" relative flex-1">
@@ -645,7 +645,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                     setDestinationQuery(e.target.value);
                     handleSearch(); // Trigger search on state change
                   }}
-                  className="pl-3"
+                  className="pl-3 text-sm"
                 />
               </div>
             </div>
@@ -657,7 +657,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full text-xs flex justify-start overflow-auto hide-scrollbar h-auto py-2  relative",
+                          "w-full text-sm flex justify-start overflow-auto hide-scrollbar h-auto py-2  relative",
                           {
                             "border-2 border-blue-500": selectedDestination?.id === result.id,
                           }
@@ -687,11 +687,11 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
             }
             { searchResults.length === 0 && routeDetails && (
               <div className="">
-                <div className=" space-x-2">
-                  <span >Travel Time: </span>
+                <div className=" text-font space-x-2">
+                 Travel Time:    <span className="font-[600]  ">{routeDetails.duration}, {routeDetails.distance}</span>
                 </div>
                 <div className="mt-2">
-                  <span className="font-semibold text-2xl ">{routeDetails.duration}, {routeDetails.distance}</span>
+                
                 </div>
               </div>
             )}
