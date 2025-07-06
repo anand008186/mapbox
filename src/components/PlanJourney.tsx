@@ -7,7 +7,7 @@ import { MapPin } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { cn } from "../lib/utils";
-
+import "../App.css";
 // Add custom styles for popups
 const popupStyles = `
   .mapboxgl-popup {
@@ -622,9 +622,9 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
             )}
           </div>
           <div className="space-y-2  max-h-[600px] w-full overflow-x-hidden overflow-y-auto hide-scrollbar">
-            <div >
-              <h1 className="text-2xl font-bold">Plan School Journey</h1>
-              <p className="text-sm text-muted-foreground pt-2">Find out the travel time from this school to your important destinations including work and home</p>
+            <div className="">
+              <h1 className="title-font">Plan School Journey</h1>
+              <p className="text-font pt-2">Find out the travel time from this school to your important destinations including work and home</p>
             </div>
             <div className="w-full flex  flex-col gap-2">
               <div className="relative flex-1">
