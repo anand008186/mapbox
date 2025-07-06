@@ -598,7 +598,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
 
   return (
     <div className="h-screen bg-background">
-      <div className="mx-auto max-w-5xl px-4 ">
+      <div className="mx-auto max-w-5xl ">
       {/* <div className="my-2">
             <h1 className="text-[20px] font-[600] tracking-tight md:text-3xl">
               School Catchment Map
@@ -621,8 +621,8 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
               </div>
             )}
           </div>
-          <div className="space-y-2  max-h-[500px] w-full overflow-x-hidden overflow-y-auto hide-scrollbar">
-            <div className="">
+          <div className="space-y-2  max-h-[600px] w-full overflow-x-hidden overflow-y-auto hide-scrollbar">
+            <div >
               <h1 className="text-2xl font-bold">Plan School Journey</h1>
               <p className="text-sm text-muted-foreground pt-2">Find out the travel time from this school to your important destinations including work and home</p>
             </div>
