@@ -598,18 +598,16 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
 
   return (
     <div className="h-screen bg-background">
-      <div className="mx-auto max-w-5xl ">
-        <div className=" rounded-xl">
-          {/* <div className="m-2">
+      <div className="mx-auto max-w-5xl px-4 ">
+      {/* <div className="my-2">
             <h1 className="text-[20px] font-[600] tracking-tight md:text-3xl">
-              Plan School Journey
+              School Catchment Map
             </h1>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Find out the travel time from this school to your important destinations including work, home, train stations, shops, and beaches.
+            <p className="mt-2 text-sm text-muted-foreground">
+              View the school catchment map
             </p>
-          </div> */}
-        </div>
-        <div className="grid grid-cols-1 gap-6 px-4">
+      </div> */}
+        <div className="grid grid-cols-1 gap-6 ">
           <div className="relative w-full h-[300px] " style={{ aspectRatio: '1/1' }}>
             <div
               ref={mapContainerRef}
@@ -623,7 +621,11 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
               </div>
             )}
           </div>
-          <div className="space-y-6  max-h-[500px] w-full overflow-x-hidden overflow-y-auto hide-scrollbar">
+          <div className="space-y-2  max-h-[500px] w-full overflow-x-hidden overflow-y-auto hide-scrollbar">
+            <div className="">
+              <h1 className="text-2xl font-bold">Plan School Journey</h1>
+              <p className="text-sm text-muted-foreground pt-2">Find out the travel time from this school to your important destinations including work and home</p>
+            </div>
             <div className="w-full flex  flex-col gap-2">
               <div className="relative flex-1">
                 <Input
@@ -677,13 +679,13 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
               </div>
             )}
             {
-              selectedDestination && (
+             searchResults.length === 0 && selectedDestination && (
                 <Button onClick={handlePlanJourney} className="mt-4 w-full sm:w-auto bg-[#147781] hover:bg-[#147781]/90 text-white">
                   Show Distance and Time
                 </Button>
               )
             }
-            {routeDetails && (
+            { searchResults.length === 0 && routeDetails && (
               <div className="">
                 <div className=" space-x-2">
                   <span >Travel Time: </span>
@@ -693,22 +695,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
                 </div>
               </div>
             )}
-            {/* {selectedSchool && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm p-0">Points of Interest in Catchment</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-xs mb-4">
-                    See nearby areas of interest such as other schools, day care, shops, train stations, and beaches.
-                  </p>
-                  <Button onClick={toggleMapStyle} variant="outline" className="w-full sm:w-auto">
-                    <Satellite className="mr-2 h-4 w-4" />
-                    <span className="text-xs">Toggle Street / Satellite View</span>
-                  </Button>
-                </CardContent>
-              </Card>
-            )} */}
+
           </div>
         </div>
 
