@@ -623,7 +623,7 @@ const existingMarkerRef = useRef<mapboxgl.Marker | null>(null); // Ref to store 
           </div>
           <div className="space-y-2  max-h-[600px] w-full overflow-x-hidden overflow-y-auto hide-scrollbar">
             <div className="">
-              <h1 className="title-font">Plan School Journey</h1>
+              <h2 className="title-font">Plan School Journey</h2>
               <p className="text-font pt-2">Find out the travel time from this school to your important destinations including work and home</p>
             </div>
             <div className="w-full flex  flex-col gap-2">
